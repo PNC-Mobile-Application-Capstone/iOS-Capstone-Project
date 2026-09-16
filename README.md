@@ -1,6 +1,6 @@
 # AdventureWorks Mobile — PNC Mobile Applications Bootcamp iOS Capstone
 
-Enterprise Mobile Application Development Bootcamp — four-person Scrum team capstone. Native iOS client for the AdventureWorks operations API, built with Swift and SwiftUI.
+Enterprise Mobile Application Development Bootcamp, four-person Scrum team capstone. Native iOS client for the AdventureWorks operations API, built with Swift and SwiftUI.
 
 ## Mission
 
@@ -8,12 +8,12 @@ Give AdventureWorks employees and managers timely access to operational informat
 
 ## Team
 
-| Focus role | Responsibility | Owner (rotates at least once) |
-| --- | --- | --- |
-| Scrum Facilitator | Planning, stand-ups, backlog refinement, review, retrospective | TBD |
-| Technical Lead | Architecture, integration choices, PR quality, technical risk | TBD |
-| Quality & Accessibility Lead | Test strategy, acceptance checks, accessibility review, defect triage | TBD |
-| Product & UX Liaison | Business value, priorities, flow coordination, stakeholder feedback | TBD |
+| Focus role                   | Responsibility                                                        | Owner (rotates at least once) |
+| ---------------------------- | --------------------------------------------------------------------- | ----------------------------- |
+| Scrum Facilitator            | Planning, stand-ups, backlog refinement, review, retrospective        | TBD                           |
+| Technical Lead               | Architecture, integration choices, PR quality, technical risk         | TBD                           |
+| Quality & Accessibility Lead | Test strategy, acceptance checks, accessibility review, defect triage | TBD                           |
+| Product & UX Liaison         | Business value, priorities, flow coordination, stakeholder feedback   | TBD                           |
 
 All members are developers and contribute code; no one is the sole owner of an application area.
 
