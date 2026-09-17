@@ -4,7 +4,7 @@ Enterprise Mobile Application Development Bootcamp, four-person Scrum team capst
 
 ## Mission
 
-Give AdventureWorks employees and managers timely access to operational information while away from their desks: sign in, review a live operations dashboard, browse employees and products, track inventory, and inspect orders — all backed by live data from the AdventureWorks API rather than hard-coded content.
+Give AdventureWorks employees and managers timely access to operational information while away from their desks: sign in, review a live operations dashboard, browse employees and products, track inventory, and inspect orders. All backed by live data from the AdventureWorks API rather than hard-coded content.
 
 ## Team
 
