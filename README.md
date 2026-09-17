@@ -1,4 +1,4 @@
-# AdventureWorks Mobile — PNC Mobile Applications Bootcamp iOS Capstone
+# AdventureWorks Mobile: PNC Mobile Applications Bootcamp iOS Capstone
 
 Enterprise Mobile Application Development Bootcamp, four-person Scrum team capstone. Native iOS client for the AdventureWorks operations API, built with Swift and SwiftUI.
 
@@ -31,7 +31,7 @@ All members are developers and contribute code; no one is the sole owner of an a
 
 - Base URL: `https://api.bootcampcentral.com/`
 - Swagger / API docs: `https://api.bootcampcentral.com/swagger/index.html`
-- Test credentials: see the team's private credentials doc — **do not commit usernames, passwords, or tokens to this repository.** Store session tokens using an appropriate secure mechanism (e.g., Keychain), never in source or logs.
+- Test credentials: see the team's private credentials doc, **do not commit usernames, passwords, or tokens to this repository.** Store session tokens using an appropriate secure mechanism (e.g., Keychain), never in source or logs.
 
 ## Scope
 
@@ -43,10 +43,10 @@ Full requirement text: `iOSCapstoneRequirements.pdf` in this folder.
 
 ## Architecture
 
-- **Views** — SwiftUI, presentation only
-- **ViewModels** — presentation/state logic, `@MainActor` where appropriate
-- **Services / Repositories** — reusable API client, request/response mapping, error mapping
-- **Models** — typed `Codable` structs for API payloads
+- **Views**: SwiftUI, presentation only
+- **ViewModels**: presentation/state logic, `@MainActor` where appropriate
+- **Services / Repositories**: reusable API client, request/response mapping, error mapping
+- **Models**: typed `Codable` structs for API payloads
 
 _(Expand this section with the team's actual module layout and any deviations from MVVM once agreed.)_
 
@@ -70,7 +70,7 @@ See the test report (added under `Documentation/`) for coverage priorities and k
 
 ## Known Limitations
 
-_(Update as the project develops — call out anything intentionally out of scope or deferred past the MVP.)_
+_(Update as the project develops, call out anything intentionally out of scope or deferred past the MVP.)_
 
 ## Project Planning
 
