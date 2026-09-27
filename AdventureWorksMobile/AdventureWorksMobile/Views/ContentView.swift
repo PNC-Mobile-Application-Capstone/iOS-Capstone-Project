@@ -12,15 +12,10 @@ struct ContentView: View {
     
     var body: some View {
         
-        if appState.isLoggedIn {
-            MainView()
-        }else
-        {
-            LoginView()
-        }
+        if appState.isLoggedIn { MainView() }
+        else { LoginView() }
     }
 }
-
 
 #Preview {
     ContentView().environmentObject(AppState())
