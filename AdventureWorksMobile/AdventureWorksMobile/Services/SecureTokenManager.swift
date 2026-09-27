@@ -24,7 +24,7 @@ final class SecureTokenManager {
     // The "key" parameter on each method below (e.g. "userAccessToken",
     // "userRefreshToken") is what distinguishes individual items within
     // that bucket.
-    private let service = "com.drew-fierst.swift-demo.auth"
+    private let service = "com.adventure-works-mobile-app.auth"
     
     /// Saves a token string into the Keychain under `key`.
     /// Returns true if the save succeeded.
