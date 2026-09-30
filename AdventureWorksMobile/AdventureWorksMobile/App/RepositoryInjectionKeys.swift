@@ -11,14 +11,11 @@ import SwiftUI
 // alone (the way @EnvironmentObject does for ObservableObjects); each
 // custom value needs a key type conforming to EnvironmentKey. This file
 // defines one key per repository. EnvExt.swift then uses these keys to
-// expose \.artistRepository / \.boardMemberRepository as if they were
+// expose \.productRepository as if it were
 // built-in environment values like \.colorScheme.
 
-/// Environment key for the Artist repository. `defaultValue` is what any
-/// view sees if nobody has injected a real one via
-/// `.environment(\.artistRepository, ...)` (e.g. in SwiftUI previews) --
-/// here it falls back to an in-memory mock instead of a real network
-/// repository.
+/// Environment key for the product repository. A nil default keeps previews
+/// from contacting the live API when no repository is explicitly injected.
 struct ProductRepositoryKey: EnvironmentKey {
     static let defaultValue: (any TieredCacheRepositoryProtocol<Product>)? = nil
 }

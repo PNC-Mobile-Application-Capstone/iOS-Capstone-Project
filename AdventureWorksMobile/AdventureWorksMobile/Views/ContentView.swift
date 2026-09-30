@@ -12,12 +12,12 @@ struct ContentView: View {
     // by its type rather than by a key, matching the plain
     // .environmentObject(authStatus) call in SwiftUIDemoApp.
     @EnvironmentObject var authStatus: AuthStatus
-    
+
     // @State is SwiftUI's property wrapper for view-local, mutable state:
     // changing `current` automatically triggers a re-render of this view's body.
     @State private var current: String = ""
-    
-    
+
+
     var body: some View {
         NavigationStack {
             VStack {
@@ -33,10 +33,18 @@ struct ContentView: View {
                         .accessibilityIdentifier("productView")
                 }
             }
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Log out") {
+                        authStatus.logout()
+                    }
+                }
+            }
         }
     }
 }
 
 #Preview {
     ContentView()
+        .environmentObject(AuthStatus())
 }

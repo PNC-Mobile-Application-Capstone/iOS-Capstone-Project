@@ -23,7 +23,6 @@ extension Product {
     @NSManaged nonisolated public var listPrice: Double
     @NSManaged nonisolated public var productNumber: String?
     @NSManaged nonisolated public var name: String?
-    @NSManaged nonisolated public var productId: Int64
 
 }
 

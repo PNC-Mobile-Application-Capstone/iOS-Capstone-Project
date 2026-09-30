@@ -13,12 +13,12 @@ import Foundation
 /// tokens in it.
 struct LoginResponse: Codable {
     var success: Bool
-    var userName: String
+    var userName: String?
     var accessToken: String?
     var refreshToken: String?
     var accessExpiry: Date?
     var refreshExpiry: Date?
-    
+
     // Maps the API's expiry field names to friendlier Swift property
     // names. The other fields don't need remapping here (the decoder's
     // .convertFromSnakeCase strategy, set where this is decoded, handles
@@ -30,5 +30,5 @@ struct LoginResponse: Codable {
         case accessExpiry = "accessTokenExpiresAtUtc"
         case refreshExpiry = "refreshTokenExpiresAtUtc"
     }
-    
+
 }

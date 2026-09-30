@@ -8,10 +8,10 @@
 import SwiftUI
 
 struct ProductList: View {
-    
+
     @State private var viewModel = ViewModel()
     @Environment(\.productRepository) private var repository
-    
+
     var body: some View {
         if !viewModel.errorMessage.isEmpty {
             Text(viewModel.errorMessage)
@@ -22,6 +22,8 @@ struct ProductList: View {
             Text("cached in memory")
         case .disk:
             Text("local disk cache")
+        case .staleDisk:
+            Text("offline cached data")
         case .notcached:
             Text("fresh api data")
         }
@@ -29,7 +31,7 @@ struct ProductList: View {
             HStack {
                 Text(item.name ?? "--")
                 Spacer()
-                Text("\(item.listPrice)")
+                Text(item.listPrice, format: .currency(code: "USD"))
             }
         }
         .task { await viewModel.loadData(repository: repository)}
@@ -37,23 +39,23 @@ struct ProductList: View {
 }
 
 extension ProductList {
-    
+
     @Observable
     class ViewModel {
         var items: [Product] = []
         var source: CachedDataSource = .notcached
         var errorMessage: String = ""
-        
+
         func loadData(repository: any TieredCacheRepositoryProtocol<Product>?) async {
             guard let repository = repository else { return }
-            
+
             do {
                 (items, source) = try await repository.getAll()
             } catch {
-                errorMessage = "\(error)"
+                errorMessage = error.localizedDescription
             }
         }
-    
+
     }
 }
 

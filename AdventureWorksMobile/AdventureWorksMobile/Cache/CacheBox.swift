@@ -7,21 +7,17 @@
 
 import Foundation
 
-/// Reference-type wrapper around a cached network response.
+/// Reference-type wrapper used by `NSCache`.
 ///
-/// NSCache (used in CachedRemoteRepoBase) requires its values to be
-/// classes, not structs, so a plain (Data, Date) tuple can't be stored in
-/// it directly. CacheBox exists purely to satisfy that requirement: it
-/// bundles the raw encoded payload together with the timestamp of when it
-/// was cached, so the cache can later decide whether an entry is still
-/// fresh (see the `maxAge` check in CachedRemoteRepoBase.fetchAll).
-class CacheBox {
-    
-    let payload: Data
+/// Managed objects are retained directly instead of being encoded and decoded.
+/// Decoding a managed object requires a context and would create duplicate
+/// objects, which made the previous JSON-backed memory cache unreliable.
+final class CacheBox<Item: AnyObject> {
+    let items: [Item]
     let timestamp: Date
-    
-    init(payload: Data, timestamp: Date) {
-        self.payload = payload
+
+    init(items: [Item], timestamp: Date) {
+        self.items = items
         self.timestamp = timestamp
     }
 }

@@ -14,74 +14,71 @@ internal import Combine
 ///
 /// `internal import Combine` above pulls in the Combine framework, which
 /// is where `ObservableObject` and `@Published` come from.
-class AuthStatus: ObservableObject {
-    
+@MainActor
+final class AuthStatus: ObservableObject {
+
     // Keys used to look the tokens up in SecureTokenManager's Keychain storage.
     private let authKey = "userAccessToken"
     private let refreshKey = "userRefreshToken"
-    
+    private let tokenStore: any TokenStoring
+
     // @Published is a property wrapper (from Combine) that turns simple
     // property assignment into a broadcast: every time isLoggedIn changes,
     // ObservableObject automatically fires objectWillChange, and any
     // SwiftUI view reading this value (via @EnvironmentObject/@StateObject)
     // re-renders. `private(set)` means only this class can change the
-    // value directly; outside code has to go through updateLoginStatus(_:).
+    // value directly; outside code has to go through logIn or logout.
     @Published private(set) var isLoggedIn = false
-    
-    
+
+
     /// On app launch, check the Keychain for both tokens. If they're both
     /// present the user is treated as still logged in (no fresh login
     /// needed) until/unless a request comes back 401 with no valid refresh
     /// token.
-    init() {
-        let auth = SecureTokenManager.shared.getToken(key: authKey)
-        let refresh = SecureTokenManager.shared.getToken(key: refreshKey)
-        
-        self.isLoggedIn = auth != nil && refresh != nil
+    init(tokenStore: any TokenStoring = SecureTokenManager.shared) {
+        self.tokenStore = tokenStore
+        let auth = tokenStore.getToken(key: authKey)
+        let refresh = tokenStore.getToken(key: refreshKey)
+
+        self.isLoggedIn = !(auth?.isEmpty ?? true) && !(refresh?.isEmpty ?? true)
     }
-    
-    
+
+
     // Computed properties that read straight from the Keychain each time,
     // rather than caching the token value here in memory. This keeps
     // AuthStatus and SecureTokenManager from drifting out of sync.
     var authToken: String? {
-        return SecureTokenManager.shared.getToken(key: authKey)
+        tokenStore.getToken(key: authKey)
     }
     var refreshToken: String? {
-        return SecureTokenManager.shared.getToken(key: refreshKey)
+        tokenStore.getToken(key: refreshKey)
     }
-    
-    
-    /// Single entry point for changing login state. Called after a
-    /// successful login, after a successful token refresh, and on logout
-    /// (success: false, with both token params left as their default "").
-    func updateLoginStatus(success: Bool,
-                           authToken: String? = "",
-                           refreshToken: String? = "") {
-        // withAnimation wraps the @Published change so SwiftUI cross-fades
-        // between LoginView and ContentView instead of just snapping.
-        withAnimation {
-            isLoggedIn = success
-        }
-        
-        let storage = SecureTokenManager.shared
-        
-        // A non-empty token gets saved; an empty/nil one (like the logout
-        // default of "") means "clear whatever is currently stored".
-        if let auth = authToken, !auth.isEmpty {
-            let _ = storage.saveToken(auth, key: authKey)
-        } else {
-            storage.deleteToken(key: authKey)
-        }
-        
-        if let refresh = refreshToken, !refresh.isEmpty {
-            let _ = storage.saveToken(refresh, key: refreshKey)
-        } else {
-            storage.deleteToken(key: refreshKey)
-        }
-        
-        
-    }
-    
-}
 
+
+    /// Stores a complete token pair before publishing a logged-in state.
+    @discardableResult
+    func logIn(accessToken: String?, refreshToken: String?) -> Bool {
+        guard let accessToken, !accessToken.isEmpty,
+              let refreshToken, !refreshToken.isEmpty else {
+            logout()
+            return false
+        }
+
+        guard tokenStore.saveToken(accessToken, key: authKey),
+              tokenStore.saveToken(refreshToken, key: refreshKey) else {
+            tokenStore.deleteToken(key: authKey)
+            tokenStore.deleteToken(key: refreshKey)
+            withAnimation { isLoggedIn = false }
+            return false
+        }
+
+        withAnimation { isLoggedIn = true }
+        return true
+    }
+
+    func logout() {
+        tokenStore.deleteToken(key: authKey)
+        tokenStore.deleteToken(key: refreshKey)
+        withAnimation { isLoggedIn = false }
+    }
+}

@@ -10,10 +10,10 @@ import Foundation
 /// The request body sent to POST /api/Login. Conforms to Codable so
 /// AuthService can hand it straight to JSONEncoder.
 struct LoginModel: Codable {
-    
+
     var username: String = ""
     var password: String = ""
-    
+
     // CodingKeys lets the JSON key differ from the Swift property name.
     // The API expects "loginId" instead of "username", so this remaps
     // just that one field; "password" is listed as-is because it needs no

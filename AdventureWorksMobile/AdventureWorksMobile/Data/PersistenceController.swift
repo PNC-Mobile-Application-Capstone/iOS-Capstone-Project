@@ -19,18 +19,21 @@ internal import CoreData
 /// `\.managedObjectContext`).
 struct PersistenceController {
     static let shared = PersistenceController()
-    
+
     // NSPersistentContainer bundles together the managed object model
     // (defined in DataModel.xcdatamodeld), the persistent store
     // coordinator, and a main-thread managed object context, so setting
     // up Core Data is a few lines instead of wiring each piece by hand.
     let container: NSPersistentContainer
-    
-    private init() {
+
+    init(inMemory: Bool = false) {
         // "DataModel" must match the .xcdatamodeld file's name exactly;
         // that's how the container finds the entity definitions
-        // (ToDoCategory, ToDoItem) at runtime.
+        // (Product) at runtime.
         container = NSPersistentContainer(name: "DataModel")
+        if inMemory {
+            container.persistentStoreDescriptions.first?.url = URL(fileURLWithPath: "/dev/null")
+        }
         // Loads (or creates, on first launch) the SQLite store on disk.
         // This is asynchronous in general, but for a local on-device store
         // it typically completes before the closure below fires. A real
@@ -42,6 +45,8 @@ struct PersistenceController {
                 fatalError("Unresolved error \(error), \(error.userInfo)")
             }
         }
+        container.viewContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
+        container.viewContext.automaticallyMergesChangesFromParent = true
     }
-    
+
 }
