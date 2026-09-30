@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftUI
+internal import CoreData
 
 @main
 struct AdventureWorksMobileApp: App {

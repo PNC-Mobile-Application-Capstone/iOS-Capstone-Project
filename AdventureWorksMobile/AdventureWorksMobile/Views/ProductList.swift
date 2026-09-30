@@ -46,7 +46,7 @@ extension ProductList {
         var source: CachedDataSource = .notcached
         var errorMessage: String = ""
 
-        func loadData(repository: any TieredCacheRepositoryProtocol<Product>?) async {
+        func loadData(repository: (any TieredCacheRepositoryProtocol<Product>)?) async {
             guard let repository = repository else { return }
 
             do {
