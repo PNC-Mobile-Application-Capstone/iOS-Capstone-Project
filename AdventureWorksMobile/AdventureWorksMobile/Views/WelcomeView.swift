@@ -11,9 +11,9 @@ struct Welcome: View {
     
     
     var body: some View {
-        Text("Groovy SwiftUI Demo")
+        Text("Adventure Works")
             .font(.largeTitle)
-            .foregroundStyle(Color(.systemBlue))
+            .foregroundStyle(Color(.systemGreen))
             .padding()
     }
 }
