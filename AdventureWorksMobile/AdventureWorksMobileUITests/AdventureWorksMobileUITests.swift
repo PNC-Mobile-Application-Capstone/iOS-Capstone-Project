@@ -23,14 +23,25 @@ final class AdventureWorksMobileUITests: XCTestCase {
     }
 
     @MainActor
-    func testExample() throws {
-        // UI tests must launch the application that they test.
+    func testLoginRequiresUsernameAndPassword() throws {
         let app = XCUIApplication()
+        app.launchArguments.append("--ui-testing-reset-auth")
         app.launch()
 
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
-        // XCUIAutomation Documentation
-        // https://developer.apple.com/documentation/xcuiautomation
+        let username = app.textFields["usernameField"]
+        let password = app.secureTextFields["passwordField"]
+        let loginButton = app.buttons["loginButton"]
+
+        XCTAssertTrue(username.waitForExistence(timeout: 5))
+        XCTAssertTrue(password.exists)
+        XCTAssertFalse(loginButton.isEnabled)
+
+        username.tap()
+        username.typeText("employee")
+        password.tap()
+        password.typeText("password")
+
+        XCTAssertTrue(loginButton.isEnabled)
     }
 
     @MainActor

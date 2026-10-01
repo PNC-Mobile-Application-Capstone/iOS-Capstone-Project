@@ -48,34 +48,47 @@ Full requirement text: `iOSCapstoneRequirements.pdf` in this folder.
 - **Services / Repositories**: reusable API client, request/response mapping, error mapping
 - **Models**: typed `Codable` structs for API payloads
 
-_(Expand this section with the team's actual module layout and any deviations from MVVM once agreed.)_
+The current implementation is organized into:
+
+- Views: login and product-list presentation
+- Models: authentication request/response state
+- Services: login, refresh-token, JSON decoding, and Keychain access
+- Repositories: authenticated API access and tiered product caching
+- Data: Core Data stack and managed product model
+- App: dependency-injection keys and shared error types
+
+Authentication tokens are stored in Keychain. Product reads use a 15-minute
+memory/Core Data cache, refresh stale data from the API, and fall back to stale
+disk data when the network is unavailable.
 
 ## Getting Started
 
-_(Fill in once the Xcode project exists.)_
-
-1. Clone the repository: `git clone <repo-url>`
-2. Open `<ProjectName>.xcodeproj` / `.xcworkspace` in Xcode `<version>`
+1. Clone the repository.
+2. Open `AdventureWorksMobile/AdventureWorksMobile.xcodeproj` in a version of
+   Xcode that supports the deployment target configured in the project.
 3. Resolve Swift Package dependencies (automatic on open)
-4. Add API test credentials per the team's setup doc (not committed)
-5. Build and run on iOS `<minimum supported version>`
+4. Build and run the `AdventureWorksMobile` scheme.
+5. Enter the team-provided API test credentials on the login screen. Credentials
+   and tokens must not be committed.
 
 ## Testing
 
 - Unit tests: business/presentation logic and networking, using mocks/stubs/injected test doubles
 - UI tests: at least one critical-path flow
-- Run tests: `Cmd+U` in Xcode, or `xcodebuild test -scheme <scheme>`
-
-See the test report (added under `Documentation/`) for coverage priorities and known unresolved defects.
+- Run tests with `Cmd+U` in Xcode.
+- Command line: `xcodebuild test -project AdventureWorksMobile/AdventureWorksMobile.xcodeproj -scheme AdventureWorksMobile -destination 'platform=iOS Simulator,name=<simulator name>'`
 
 ## Known Limitations
 
-_(Update as the project develops, call out anything intentionally out of scope or deferred past the MVP.)_
+- Product listing and authenticated session management are implemented.
+- Product details, employee, inventory, order, and dashboard features remain to
+  be implemented.
+- Stale product data is intentionally displayed when an API refresh fails.
 
 ## Project Planning
 
 - Team checklist and phased approach: see the group's shared Claude Doc (linked in the team channel)
-- Backlog, sprint board, and Scrum artifacts: see the team's board tool export under `Documentation/`
+- Backlog, sprint board, and Scrum artifacts are maintained in the team's board tool.
 
 ## Contributing
 
