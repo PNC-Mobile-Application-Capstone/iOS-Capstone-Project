@@ -66,6 +66,20 @@ class RemoteRepositoryBase<Item: Codable> {
         }
     }
     
+    // MARK: - fetchDecoded method
+
+    /// Fetches any Decodable shape from an endpoint, not just Item.
+    /// Used for partial responses, like loading only a product's photo.
+    func fetchDecoded<T: Decodable>(_ urlString: String, as type: T.Type) async throws -> T {
+        let request = try createRequest(urlString)
+        let data = try await executeRequest(request)
+        do {
+            return try JSONDecoder().decode(T.self, from: data)
+        } catch {
+            throw NetworkError.decodingFailed(underlying: error)
+        }
+    }
+
     // MARK: - post method
     
     func post(_ urlString: String, send item: Item) async throws -> Item {

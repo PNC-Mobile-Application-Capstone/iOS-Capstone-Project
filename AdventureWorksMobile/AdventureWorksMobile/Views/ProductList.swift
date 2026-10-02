@@ -62,6 +62,8 @@ extension ProductList {
             } catch {
                 errorMessage = "\(error)"
             }
+            
+            print("Loaded \(items.count) items from \(source)")
         }
     
     }
