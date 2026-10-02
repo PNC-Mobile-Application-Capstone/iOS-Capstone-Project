@@ -13,7 +13,7 @@ public import CoreData
 public typealias ProductCoreDataPropertiesSet = NSSet
 
 extension Product {
-
+    
     @nonobjc public class func fetchRequest() -> NSFetchRequest<Product> {
         return NSFetchRequest<Product>(entityName: "Product")
     }
@@ -23,6 +23,8 @@ extension Product {
     @NSManaged nonisolated public var listPrice: Double
     @NSManaged nonisolated public var productNumber: String?
     @NSManaged nonisolated public var name: String?
+    @NSManaged nonisolated public var photo: Data?
+    @NSManaged nonisolated public var productId: Int64
 
 }
 

@@ -16,7 +16,7 @@ public class Product: NSManagedObject, Codable {
 
     enum CodingKeys: String, CodingKey {
         case id = "productId"
-        case name, color, listPrice, productNumber
+        case name, color, listPrice, productNumber, photo
     }
 
     public required convenience init(from decoder: any Decoder) throws {
@@ -28,11 +28,12 @@ public class Product: NSManagedObject, Codable {
 
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.id = try container.decode(Int64.self, forKey: .id)
-        self.name = try container.decodeIfPresent(String.self, forKey: .name)
-        self.color = try container.decodeIfPresent(String.self, forKey: .color)
-        self.listPrice = try container.decodeIfPresent(Double.self, forKey: .listPrice) ?? 0
-        self.productNumber = try container.decodeIfPresent(String.self, forKey: .productNumber)
-
+        self.name = try container.decode(String.self, forKey: .name)
+        self.color = try container.decode(String?.self, forKey: .color)
+        self.photo = try container.decodeIfPresent(Data.self, forKey: .photo)
+        self.listPrice = try container.decode(Double.self, forKey: .listPrice)
+        self.productNumber = try container.decode(String.self, forKey: .productNumber)
+        
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -43,5 +44,6 @@ public class Product: NSManagedObject, Codable {
         try container.encode(color, forKey: .color)
         try container.encode(listPrice, forKey: .listPrice)
         try container.encode(productNumber, forKey: .productNumber)
+        try container.encode(photo, forKey: .photo)
     }
 }
