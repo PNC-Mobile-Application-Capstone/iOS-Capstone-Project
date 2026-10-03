@@ -31,6 +31,9 @@ struct ContentView: View {
                 case "products":
                     ProductList()
                         .accessibilityIdentifier("productView")
+                case "dashboard":
+                    DashboardView(repository:MockDashboardRepository())
+                        .accessibilityIdentifier("productView")
                 default:
                     Welcome()
                         .accessibilityIdentifier("welcomeView")
@@ -43,30 +46,24 @@ struct ContentView: View {
                             current = "home"
                         }
                         .accessibilityIdentifier("homeViewButton")
+                        Button("Dashboard") {
+                            current = "dashboard"
+                        }
+                        .accessibilityIdentifier("productsViewButton")
                         Button("Products") {
                             current = "products"
                         }
                         .accessibilityIdentifier("productsViewButton")
                         Divider()
                         Button("Log out") {
-                            // Clears isLoggedIn (and, inside
-                            // updateLoginStatus, both Keychain tokens since
-                            // no authToken/refreshToken args are passed
-                            // here), which flips SwiftUIDemoApp back to
-                            // showing LoginView.
-                            authStatus.updateLoginStatus(success: false)
+                            // Clears both Keychain tokens and sets isLoggedIn to false,
+                            // which sends the app back to LoginView.
+                            authStatus.logout()
                         }
                         .accessibilityIdentifier("logoutButton")
                     }
                     label: { Label("View", systemImage: "line.3.horizontal") }
                     .accessibilityIdentifier("mainMenuButton")
-                }
-            }
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Log out") {
-                        authStatus.logout()
-                    }
                 }
             }
         }
