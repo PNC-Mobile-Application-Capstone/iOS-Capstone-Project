@@ -13,28 +13,38 @@ struct ProductList: View {
     @Environment(\.productRepository) private var repository
 
     var body: some View {
-        if !viewModel.errorMessage.isEmpty {
-            Text(viewModel.errorMessage)
-                .font(.title)
-        }
-        switch viewModel.source {
-        case .memory:
-            Text("cached in memory")
-        case .disk:
-            Text("local disk cache")
-        case .staleDisk:
-            Text("offline cached data")
-        case .notcached:
-            Text("fresh api data")
-        }
-        List(viewModel.items) { item in
-            HStack {
-                Text(item.name ?? "--")
-                Spacer()
-                Text(item.listPrice, format: .currency(code: "USD"))
+        NavigationStack {
+            if !viewModel.errorMessage.isEmpty {
+                Text(viewModel.errorMessage)
+                    .font(.title)
+            }
+            
+            switch viewModel.source {
+            case .memory:
+                Text("cached in memory")
+            case .disk:
+                Text("local disk cache")
+            case .notcached:
+                Text("fresh api data")
+            case .staleDisk:
+                Text("stale disk")
+            }
+            
+            VStack(alignment: .leading, spacing: 8) {
+                List(viewModel.items) { item in
+                    NavigationLink {
+                        ProductDetails(product: item)
+                    } label: {
+                        HStack {
+                            Text(item.name ?? "--")
+                            Spacer()
+                            Text("\(item.listPrice)")
+                        }
+                    }
+                }
+                .task { await viewModel.loadData(repository: repository)}
             }
         }
-        .task { await viewModel.loadData(repository: repository)}
     }
 }
 
@@ -54,6 +64,8 @@ extension ProductList {
             } catch {
                 errorMessage = error.localizedDescription
             }
+            
+            print("Loaded \(items.count) items from \(source)")
         }
 
     }
