@@ -10,10 +10,14 @@ Give AdventureWorks employees and managers timely access to operational informat
 
 | Focus role                   | Responsibility                                                        | Owner (rotates at least once) |
 | ---------------------------- | --------------------------------------------------------------------- | ----------------------------- |
-| Scrum Facilitator            | Planning, stand-ups, backlog refinement, review, retrospective        | TBD                           |
-| Technical Lead               | Architecture, integration choices, PR quality, technical risk         | TBD                           |
-| Quality & Accessibility Lead | Test strategy, acceptance checks, accessibility review, defect triage | TBD                           |
-| Product & UX Liaison         | Business value, priorities, flow coordination, stakeholder feedback   | TBD                           |
+| Scrum Facilitator            | Planning, stand-ups, backlog refinement, review, retrospective        | 1. Tyler                      |
+|                              |                                                                       | 2.                            |
+| Technical Lead               | Architecture, integration choices, PR quality, technical risk         | 1. Nate                       |
+|                              |                                                                       | 2.                            |
+| Quality & Accessibility Lead | Test strategy, acceptance checks, accessibility review, defect triage | 1. Aza                        |
+|                              |                                                                       | 2.                            |
+| Product & UX Liaison         | Business value, priorities, flow coordination, stakeholder feedback   | 1. Jonah                      |
+|                              |                                                                       | 2.                            |
 
 All members are developers and contribute code; no one is the sole owner of an application area.
 
