@@ -14,7 +14,7 @@ class TieredCacheProductRepository: TieredCacheRepositoryBase<Product> {
                   urlBase: String,
                   context: NSManagedObjectContext,
                   session: URLSession = .shared,
-                  authService: any AuthServicing = AuthService.shared,
+                  authService: (any AuthServicing?) = nil,
                   defaults: UserDefaults = .standard,
                   now: @escaping () -> Date = Date.init) {
         let url = "\(urlBase)/product"

@@ -35,7 +35,8 @@ final class AuthStatus: ObservableObject {
     /// present the user is treated as still logged in (no fresh login
     /// needed) until/unless a request comes back 401 with no valid refresh
     /// token.
-    init(tokenStore: any TokenStoring = SecureTokenManager.shared) {
+    init(tokenStore: (any TokenStoring)? = nil) {
+        let tokenStore = tokenStore ?? SecureTokenManager.shared
         self.tokenStore = tokenStore
         let auth = tokenStore.getToken(key: authKey)
         let refresh = tokenStore.getToken(key: refreshKey)
