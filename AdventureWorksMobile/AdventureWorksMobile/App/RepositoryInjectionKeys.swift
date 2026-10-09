@@ -19,3 +19,18 @@ import SwiftUI
 struct ProductRepositoryKey: EnvironmentKey {
     static let defaultValue: (any TieredCacheRepositoryProtocol<Product>)? = nil
 }
+
+/// Environment key for the customer order repository.
+struct CustomerOrderRepositoryKey: EnvironmentKey {
+    static let defaultValue: (any TieredCacheRepositoryProtocol<CustomerOrder>)? = nil
+}
+
+/// Environment key for the inventory repository.
+struct InventoryRepositoryKey: EnvironmentKey {
+    static let defaultValue: (any TieredCacheRepositoryProtocol<Inventory>)? = nil
+}
+
+/// Environment key for the employee repository.
+struct EmployeeRepositoryKey: EnvironmentKey {
+    static let defaultValue: (any TieredCacheRepositoryProtocol<Employee>)? = nil
+}

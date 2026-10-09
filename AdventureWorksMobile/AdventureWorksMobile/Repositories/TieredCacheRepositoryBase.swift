@@ -26,7 +26,7 @@ class TieredCacheRepositoryBase<Item: NSManagedObject & Codable & Identifiable>:
 
     override init(authStatus: AuthStatus,
                   session: URLSession = .shared,
-                  authService: any AuthServicing = AuthService.shared) {
+                  authService: (any AuthServicing)? = nil) {
         self.urlBase = ""
         self.context = nil
         self.defaults = .standard
@@ -38,7 +38,7 @@ class TieredCacheRepositoryBase<Item: NSManagedObject & Codable & Identifiable>:
          urlBase: String,
          context: NSManagedObjectContext,
          session: URLSession = .shared,
-         authService: any AuthServicing = AuthService.shared,
+         authService: (any AuthServicing)? = nil,
          defaults: UserDefaults = .standard,
          now: @escaping () -> Date = Date.init) {
         memoryCache.countLimit = 100

@@ -30,10 +30,10 @@ class RemoteRepositoryBase<Item: Codable> {
 
     init(authStatus: AuthStatus,
          session: URLSession = .shared,
-         authService: any AuthServicing = AuthService.shared) {
+         authService: (any AuthServicing)? = nil) {
         self.authStatus = authStatus
         self.session = session
-        self.authService = authService
+        self.authService = authService ?? AuthService.shared
     }
 
     // MARK: - fetchAll method
