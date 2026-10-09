@@ -24,4 +24,19 @@ extension EnvironmentValues {
         get { self[ProductRepositoryKey.self] }
         set { self[ProductRepositoryKey.self] = newValue }
     }
+
+    var customerOrderRepository: (any TieredCacheRepositoryProtocol<CustomerOrder>)? {
+        get { self[CustomerOrderRepositoryKey.self] }
+        set { self[CustomerOrderRepositoryKey.self] = newValue }
+    }
+
+    var inventoryRepository: (any TieredCacheRepositoryProtocol<Inventory>)? {
+        get { self[InventoryRepositoryKey.self] }
+        set { self[InventoryRepositoryKey.self] = newValue }
+    }
+
+    var employeeRepository: (any TieredCacheRepositoryProtocol<Employee>)? {
+        get { self[EmployeeRepositoryKey.self] }
+        set { self[EmployeeRepositoryKey.self] = newValue }
+    }
 }

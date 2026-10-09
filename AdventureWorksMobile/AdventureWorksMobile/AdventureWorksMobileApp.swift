@@ -22,6 +22,9 @@ struct AdventureWorksMobileApp: App {
     @StateObject private var authStatus: AuthStatus
     private let persistenceController: PersistenceController
     private let productRepository: TieredCacheProductRepository
+    private let customerOrderRepository: TieredCacheCustomerOrderRepository
+    private let inventoryRepository: TieredCacheInventoryRepository
+    private let employeeRepository: TieredCacheEmployeeRepository
 
     init() {
         let authStatus = AuthStatus()
@@ -32,6 +35,21 @@ struct AdventureWorksMobileApp: App {
         _authStatus = StateObject(wrappedValue: authStatus)
         self.persistenceController = persistenceController
         self.productRepository = TieredCacheProductRepository(
+            authStatus: authStatus,
+            urlBase: Self.awAPIURL,
+            context: persistenceController.container.viewContext
+        )
+        self.customerOrderRepository = TieredCacheCustomerOrderRepository(
+            authStatus: authStatus,
+            urlBase: Self.awAPIURL,
+            context: persistenceController.container.viewContext
+        )
+        self.inventoryRepository = TieredCacheInventoryRepository(
+            authStatus: authStatus,
+            urlBase: Self.awAPIURL,
+            context: persistenceController.container.viewContext
+        )
+        self.employeeRepository = TieredCacheEmployeeRepository(
             authStatus: authStatus,
             urlBase: Self.awAPIURL,
             context: persistenceController.container.viewContext
@@ -53,6 +71,9 @@ struct AdventureWorksMobileApp: App {
                 // Injects the long-lived, network-backed product repository.
                 // It shares this AuthStatus instance with the root UI.
                     .environment(\.productRepository, productRepository)
+                    .environment(\.customerOrderRepository, customerOrderRepository)
+                    .environment(\.inventoryRepository, inventoryRepository)
+                    .environment(\.employeeRepository, employeeRepository)
                 // Separate from the custom repository key above,
                 // environmentObject() is how @EnvironmentObject-
                 // declared properties (like ContentView's authStatus)
