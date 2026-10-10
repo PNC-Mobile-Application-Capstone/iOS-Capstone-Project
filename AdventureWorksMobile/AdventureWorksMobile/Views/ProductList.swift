@@ -1,8 +1,8 @@
 //
 //  ProductList.swift
-//  SwiftUIDemo
+//  AdventureWorksMobile
 //
-//  Created by Tyler Swindell on 9/18/26.
+//  Created by Tyler Swindell on 9/20/26.
 //
 
 import SwiftUI
@@ -15,19 +15,14 @@ struct ProductList: View {
     var body: some View {
         NavigationStack {
             if !viewModel.errorMessage.isEmpty {
-                Text(viewModel.errorMessage)
-                    .font(.title)
+                Text(viewModel.errorMessage).font(.title)
             }
             
             switch viewModel.source {
-            case .memory:
-                Text("cached in memory")
-            case .disk:
-                Text("local disk cache")
-            case .notcached:
-                Text("fresh api data")
-            case .staleDisk:
-                Text("stale disk")
+            case .memory:       Text("cached in memory")
+            case .disk:         Text("local disk cache")
+            case .notcached:    Text("fresh api data")
+            case .staleDisk:    Text("stale disk")
             }
             
             VStack(alignment: .leading, spacing: 8) {
@@ -41,8 +36,7 @@ struct ProductList: View {
                             Text("\(item.listPrice)")
                         }
                     }
-                }
-                .task { await viewModel.loadData(repository: repository)}
+                }.task { await viewModel.loadData(repository: repository)}
             }
         }
     }
@@ -71,6 +65,4 @@ extension ProductList {
     }
 }
 
-#Preview {
-    ProductList()
-}
+#Preview { ProductList() }

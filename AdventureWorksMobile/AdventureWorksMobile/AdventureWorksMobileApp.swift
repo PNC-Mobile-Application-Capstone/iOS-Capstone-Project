@@ -21,10 +21,12 @@ struct AdventureWorksMobileApp: App {
     // app runs.
     @StateObject private var authStatus: AuthStatus
     private let persistenceController: PersistenceController
-    private let productRepository: TieredCacheProductRepository
-    private let customerOrderRepository: TieredCacheCustomerOrderRepository
-    private let inventoryRepository: TieredCacheInventoryRepository
-    private let employeeRepository: TieredCacheEmployeeRepository
+    // Every repository uses the generic base class with its own endpoint.
+    // Product photo loading lives in TieredCacheRepositoryBase+ProductPhoto.
+    private let productRepository: TieredCacheRepositoryBase<Product>
+    private let customerOrderRepository: TieredCacheRepositoryBase<CustomerOrder>
+    private let inventoryRepository: TieredCacheRepositoryBase<Inventory>
+    private let employeeRepository: TieredCacheRepositoryBase<Employee>
 
     init() {
         let authStatus = AuthStatus()
@@ -34,24 +36,28 @@ struct AdventureWorksMobileApp: App {
         let persistenceController = PersistenceController.shared
         _authStatus = StateObject(wrappedValue: authStatus)
         self.persistenceController = persistenceController
-        self.productRepository = TieredCacheProductRepository(
+        // GET /api/Product
+        self.productRepository = TieredCacheRepositoryBase<Product>(
             authStatus: authStatus,
-            urlBase: Self.awAPIURL,
+            urlBase: APIEndpoint.products.urlString,
             context: persistenceController.container.viewContext
         )
-        self.customerOrderRepository = TieredCacheCustomerOrderRepository(
+        // GET /api/Order/customer
+        self.customerOrderRepository = TieredCacheRepositoryBase<CustomerOrder>(
             authStatus: authStatus,
-            urlBase: Self.awAPIURL,
+            urlBase: APIEndpoint.customerOrders.urlString,
             context: persistenceController.container.viewContext
         )
-        self.inventoryRepository = TieredCacheInventoryRepository(
+        // GET /api/Inventory
+        self.inventoryRepository = TieredCacheRepositoryBase<Inventory>(
             authStatus: authStatus,
-            urlBase: Self.awAPIURL,
+            urlBase: APIEndpoint.inventory.urlString,
             context: persistenceController.container.viewContext
         )
-        self.employeeRepository = TieredCacheEmployeeRepository(
+        // GET /api/Employee
+        self.employeeRepository = TieredCacheRepositoryBase<Employee>(
             authStatus: authStatus,
-            urlBase: Self.awAPIURL,
+            urlBase: APIEndpoint.employees.urlString,
             context: persistenceController.container.viewContext
         )
     }
@@ -59,7 +65,7 @@ struct AdventureWorksMobileApp: App {
     var body: some Scene {
         WindowGroup {
             // Whether the user sees the logged-in app or the login screen
-            // is driven entirely by AuthStatus.isLoggedIn, which was
+            // is decided by AuthStatus.isLoggedIn, which was
             // itself seeded from whatever tokens were found in the
             // Keychain when AuthStatus was created above.
             if authStatus.isLoggedIn {
@@ -68,7 +74,7 @@ struct AdventureWorksMobileApp: App {
                 // Makes Core Data's main-thread context available to
                 // any view via @Environment(\.managedObjectContext, ...).
                     .environment(\.managedObjectContext, persistenceController.container.viewContext)
-                // Injects the long-lived, network-backed product repository.
+                // Injects the project repositories.
                 // It shares this AuthStatus instance with the root UI.
                     .environment(\.productRepository, productRepository)
                     .environment(\.customerOrderRepository, customerOrderRepository)

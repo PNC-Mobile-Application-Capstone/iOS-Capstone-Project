@@ -56,7 +56,7 @@ struct ProductDetails: View {
     }
 
     private func loadPhoto() async {
-        guard let repo = repository as? TieredCacheProductRepository else { return }
+        guard let repo = repository as? TieredCacheRepositoryBase<Product> else { return }
         do {
             photoData = try await repo.loadPhoto(for: product)
         } catch {

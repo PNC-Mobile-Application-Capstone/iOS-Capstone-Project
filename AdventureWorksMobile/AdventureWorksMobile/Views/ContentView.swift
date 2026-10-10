@@ -8,9 +8,6 @@
 import SwiftUI
 
 struct ContentView: View {
-    // @EnvironmentObject, unlike @Environment, looks up an ObservableObject
-    // by its type rather than by a key, matching the plain
-    // .environmentObject(authStatus) call in SwiftUIDemoApp.
     @EnvironmentObject var authStatus: AuthStatus
 
     // @State is SwiftUI's property wrapper for view-local, mutable state:
