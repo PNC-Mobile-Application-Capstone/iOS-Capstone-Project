@@ -2,6 +2,8 @@
 //  TieredCacheRepositoryBase.swift
 //  AdventureWorksMobile
 //
+//  Created by Tyler Swindell on 9/20/26.
+//
 
 internal import CoreData
 import Foundation
@@ -15,14 +17,14 @@ class TieredCacheRepositoryBase<Item: NSManagedObject & Codable & Identifiable>:
     private let cacheKeyPrefix = String(describing: Item.self)
     private let maxAge: TimeInterval = 15 * 60
 
-    private let urlBase: String
+    // Not private, so extensions in other files (like the product photo
+    // extension) can build detail URLs from it.
+    let urlBase: String
     private let context: NSManagedObjectContext?
     private let defaults: UserDefaults
     private let now: () -> Date
 
-    private var timestampKey: String {
-        "cache.timestamp.\(cacheKeyPrefix).\(urlBase)"
-    }
+    private var timestampKey: String { "cache.timestamp.\(cacheKeyPrefix).\(urlBase)" }
 
     override init(authStatus: AuthStatus,
                   session: URLSession = .shared,
@@ -57,13 +59,9 @@ class TieredCacheRepositoryBase<Item: NSManagedObject & Codable & Identifiable>:
         let currentDate = now()
 
         if let box = memoryCache.object(forKey: urlBase as NSString),
-           currentDate.timeIntervalSince(box.timestamp) <= maxAge {
-            return (box.items, .memory)
-        }
+           currentDate.timeIntervalSince(box.timestamp) <= maxAge { return (box.items, .memory) }
 
-        guard let context else {
-            throw CachingConfigurationError.missingManagedObjectContext
-        }
+        guard let context else { throw CachingConfigurationError.missingManagedObjectContext }
 
         let diskResults = try await context.perform {
             let request = NSFetchRequest<Item>(entityName: String(describing: Item.self))
@@ -73,8 +71,12 @@ class TieredCacheRepositoryBase<Item: NSManagedObject & Codable & Identifiable>:
         if !diskResults.isEmpty,
            let diskTimestamp = defaults.object(forKey: timestampKey) as? Date,
            currentDate.timeIntervalSince(diskTimestamp) <= maxAge {
-            memoryCache.setObject(CacheBox(items: diskResults, timestamp: diskTimestamp),
-                                  forKey: urlBase as NSString)
+            memoryCache.setObject(
+                CacheBox(
+                    items: diskResults,
+                    timestamp: diskTimestamp
+                ), forKey: urlBase as NSString)
+            
             return (diskResults, .disk)
         }
 
@@ -89,19 +91,21 @@ class TieredCacheRepositoryBase<Item: NSManagedObject & Codable & Identifiable>:
             }
 
             defaults.set(currentDate, forKey: timestampKey)
+            
             let items = refreshedResults.isEmpty ? apiResults : refreshedResults
-            memoryCache.setObject(CacheBox(items: items, timestamp: currentDate),
-                                  forKey: urlBase as NSString)
+            memoryCache.setObject(
+                CacheBox(
+                    items: items,
+                    timestamp: currentDate
+                ), forKey: urlBase as NSString)
+            
             return (items, .notcached)
+            
         } catch {
             await context.perform {
-                if context.hasChanges {
-                    context.rollback()
-                }
+                if context.hasChanges { context.rollback() }
             }
-            if !diskResults.isEmpty {
-                return (diskResults, .staleDisk)
-            }
+            if !diskResults.isEmpty { return (diskResults, .staleDisk) }
             throw error
         }
     }

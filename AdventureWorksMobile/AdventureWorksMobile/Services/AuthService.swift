@@ -1,8 +1,8 @@
 //
 //  AuthService.swift
-//  SwiftUIDemo
+//  AdventureWorksMobile
 //
-//  Created by Tyler Swindell on 9/15/26.
+//  Created by Tyler Swindell on 9/20/26.
 //
 
 import Foundation
@@ -41,9 +41,7 @@ final class AuthService: AuthServicing {
     /// token on success).
     func login(credentials: LoginModel) async throws -> LoginResponse {
 
-        let urlString = "https://api.bootcampcentral.com/api/Login"
-
-        guard let url = URL(string: urlString) else {
+        guard let url = APIEndpoint.login.url else {
             throw NetworkError.invalidURL
         }
 
@@ -100,9 +98,7 @@ final class AuthService: AuthServicing {
     /// their access token expires.
     func refreshToken(authToken: String, refreshToken: String) async throws -> LoginResponse {
 
-        let urlString = "https://api.bootcampcentral.com/api/Login/refresh"
-
-        guard let url = URL(string: urlString) else {
+        guard let url = APIEndpoint.refreshToken.url else {
             throw NetworkError.invalidURL
         }
 

@@ -185,9 +185,9 @@ struct AdventureWorksMobileTests {
         }
 
         let session = Self.stubbedSession()
-        let repository = TieredCacheProductRepository(
+        let repository = TieredCacheRepositoryBase<Product>(
             authStatus: status,
-            urlBase: "https://example.test/api",
+            urlBase: "https://example.test/api/product",
             context: persistence.container.viewContext,
             session: session,
             defaults: defaults,
@@ -200,9 +200,9 @@ struct AdventureWorksMobileTests {
         #expect(networkSource == .notcached)
         #expect(memorySource == .memory)
 
-        let diskRepository = TieredCacheProductRepository(
+        let diskRepository = TieredCacheRepositoryBase<Product>(
             authStatus: status,
-            urlBase: "https://example.test/api",
+            urlBase: "https://example.test/api/product",
             context: persistence.container.viewContext,
             session: session,
             defaults: defaults,
@@ -213,9 +213,9 @@ struct AdventureWorksMobileTests {
 
         currentDate.addTimeInterval(16 * 60)
         URLProtocolStub.handler = { _ in throw URLError(.notConnectedToInternet) }
-        let offlineRepository = TieredCacheProductRepository(
+        let offlineRepository = TieredCacheRepositoryBase<Product>(
             authStatus: status,
-            urlBase: "https://example.test/api",
+            urlBase: "https://example.test/api/product",
             context: persistence.container.viewContext,
             session: session,
             defaults: defaults,

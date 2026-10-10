@@ -1,8 +1,8 @@
 //
 //  PersistenceController.swift
-//  SwiftUIDemo
+//  AdventureWorksMobile
 //
-//  Created by Tyler Swindell on 9/16/26.
+//  Created by Tyler Swindell on 9/20/26.
 //
 
 // "internal import" is an access-control modifier on the import itself:
@@ -14,9 +14,6 @@ internal import CoreData
 /// Owns the app's Core Data stack: the persistent container, its store,
 /// and the managed object context views read/write through.
 /// `PersistenceController.shared` is the single instance the whole app
-/// uses (see SwiftUIDemoApp, which injects
-/// `persistenceController.container.viewContext` into the environment as
-/// `\.managedObjectContext`).
 struct PersistenceController {
     static let shared = PersistenceController()
 
