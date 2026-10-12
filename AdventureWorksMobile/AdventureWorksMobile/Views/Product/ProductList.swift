@@ -14,30 +14,37 @@ struct ProductList: View {
 
     var body: some View {
         NavigationStack {
-            if !viewModel.errorMessage.isEmpty {
-                Text(viewModel.errorMessage).font(.title)
-            }
-            
-            switch viewModel.source {
-            case .memory:       Text("cached in memory")
-            case .disk:         Text("local disk cache")
-            case .notcached:    Text("fresh api data")
-            case .staleDisk:    Text("stale disk")
-            }
-            
-            VStack(alignment: .leading, spacing: 8) {
-                List(viewModel.items) { item in
-                    NavigationLink {
-                        ProductDetails(product: item)
-                    } label: {
-                        HStack {
-                            Text(item.name ?? "--")
-                            Spacer()
-                            Text("\(item.listPrice)")
+            VStack(spacing: 0) {
+                ListHeader(title: "Products",
+                           source: viewModel.source,
+                           errorMessage: viewModel.errorMessage)
+
+                List {
+                    ForEach(viewModel.items.shown) { item in
+                        NavigationLink {
+                            ProductDetails(product: item)
+                        } label: {
+                            HStack {
+                                Text(item.name ?? "--")
+                                Spacer()
+                                Text(item.listPrice, format: .currency(code: "USD"))
+                                    .foregroundStyle(.secondary)
+                            }
                         }
                     }
-                }.task { await viewModel.loadData(repository: repository)}
+
+                    // Reached the last loaded product: show the next page.
+                    if viewModel.items.hasMore {
+                        LoadMoreRow { viewModel.items.loadMore() }
+                    }
+                }
             }
+            .background(Color(.systemGroupedBackground))
+            // Title is drawn by ListHeader so it stays put while the list
+            // scrolls. navigationTitle still labels the back button.
+            .navigationTitle("Products")
+            .toolbar(.hidden, for: .navigationBar)
+            .task { await viewModel.loadData(repository: repository) }
         }
     }
 }
@@ -46,7 +53,8 @@ extension ProductList {
 
     @Observable
     class ViewModel {
-        var items: [Product] = []
+        /// Every product, revealed a page at a time as the user scrolls.
+        var items = PagedItems<Product>(pageSize: 25)
         var source: CachedDataSource = .notcached
         var errorMessage: String = ""
 
@@ -54,12 +62,13 @@ extension ProductList {
             guard let repository = repository else { return }
 
             do {
-                (items, source) = try await repository.getAll()
+                let (products, source) = try await repository.getAll()
+                self.source = source
+                items.replace(with: products)
+                print("Loaded \(products.count) items from \(source)")
             } catch {
                 errorMessage = error.localizedDescription
             }
-            
-            print("Loaded \(items.count) items from \(source)")
         }
 
     }

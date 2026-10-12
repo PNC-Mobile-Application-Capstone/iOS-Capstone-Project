@@ -44,8 +44,12 @@ struct ProductDetails: View {
                 Text(product.productNumber ?? "ERROR")
                     .padding(5)
                 
-                Text(product.color ?? "ERROR")
-                    .padding(5)
+                
+                if product.color != nil  {
+                    Text(product.color ?? "ERROR")
+                        .padding(5)
+                }
+                
                 
                 // formatting numbers in text views https://swiftprogramming.com/format-numbers-swiftui/
                 Text(product.listPrice, format: .number.precision(.fractionLength(2)))
