@@ -24,6 +24,10 @@ struct ContentView: View {
                 .accessibilityIdentifier("productView")
                 .tabItem { Label("Products", systemImage: "shippingbox.fill") }
             
+            CustomerOrderList()
+                .accessibilityIdentifier("customerOrderView")
+                .tabItem { Label("Orders", systemImage: "list.bullet.circle.fill") }
+            
             AccountView()
                 .accessibilityIdentifier("accountView")
                 .tabItem { Label("Account", systemImage: "person.crop.circle")}

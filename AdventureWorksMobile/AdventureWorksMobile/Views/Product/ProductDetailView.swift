@@ -28,7 +28,8 @@ struct ProductDetails: View {
                         .resizable()
                         .scaledToFit()
                         .frame(maxWidth: .infinity, maxHeight: 200)
-                } else {
+                }
+                else {
                     Image(systemName: "photo")
                         .resizable()
                         .scaledToFit()
