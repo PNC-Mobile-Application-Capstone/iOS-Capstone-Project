@@ -16,8 +16,11 @@ public class CustomerOrder: NSManagedObject, Codable {
 
     enum CodingKeys: String, CodingKey {
         
-        case id, firstName, lastName, orderDate, shipDate, productName,
-             orderQty, customerId, unitPrice, lineTotal, orderNumber
+        case id, firstName, lastName,
+             orderDate, shipDate,
+             productName, orderQty,
+             customerId, unitPrice,
+             lineTotal, orderNumber
     }
 
     public required convenience init(from decoder: any Decoder) throws {
