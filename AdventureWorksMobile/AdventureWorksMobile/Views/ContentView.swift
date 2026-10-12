@@ -27,10 +27,13 @@ struct ContentView: View {
                         .accessibilityIdentifier("welcomeView")
                 case "products":
                     ProductList()
-                        .accessibilityIdentifier("productView")
+                        .accessibilityIdentifier("productListView")
+                case "customerOrder":
+                    CustomerOrderList()
+                        .accessibilityIdentifier("customerOrderListView")
                 case "dashboard":
                     DashboardView(repository:MockDashboardRepository())
-                        .accessibilityIdentifier("productView")
+                        .accessibilityIdentifier("dashboardView")
                 default:
                     Welcome()
                         .accessibilityIdentifier("welcomeView")
@@ -46,11 +49,15 @@ struct ContentView: View {
                         Button("Dashboard") {
                             current = "dashboard"
                         }
-                        .accessibilityIdentifier("productsViewButton")
+                        .accessibilityIdentifier("dashboardViewButton")
                         Button("Products") {
                             current = "products"
                         }
                         .accessibilityIdentifier("productsViewButton")
+                        Button("Customer Orders") {
+                            current = "customerOrder"
+                        }
+                        .accessibilityIdentifier("customerOrdersViewButton")
                         Divider()
                         Button("Log out") {
                             // Clears both Keychain tokens and sets isLoggedIn to false,
