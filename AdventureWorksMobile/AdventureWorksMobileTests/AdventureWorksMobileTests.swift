@@ -136,6 +136,7 @@ struct AdventureWorksMobileTests {
             Issue.record("Expected the request to fail as unauthorized")
         } catch NetworkError.unauthorized {
             #expect(!status.isLoggedIn)
+            #expect(status.sessionMessage == "Your session expired. Please sign in again.")
             #expect(status.authToken == nil)
             #expect(status.refreshToken == nil)
         } catch {
@@ -224,6 +225,54 @@ struct AdventureWorksMobileTests {
         let (offlineItems, offlineSource) = try await offlineRepository.getAll()
         #expect(offlineItems.count == 1)
         #expect(offlineSource == .staleDisk)
+    }
+
+    @Test
+    func savedSessionIsRestoredAndExpiryMessageClearsOnLoginAndLogout() {
+        let store = InMemoryTokenStore()
+        let original = AuthStatus(tokenStore: store)
+        #expect(original.logIn(accessToken: "access", refreshToken: "refresh"))
+        let restored = AuthStatus(tokenStore: store)
+        #expect(restored.isLoggedIn)
+
+        restored.logout(sessionExpired: true)
+        #expect(!restored.isLoggedIn)
+        #expect(restored.sessionMessage == "Your session expired. Please sign in again.")
+        #expect(store.values.isEmpty)
+
+        #expect(restored.logIn(accessToken: "new-access", refreshToken: "new-refresh"))
+        #expect(restored.sessionMessage == nil)
+        restored.logout(sessionExpired: true)
+        restored.logout()
+        #expect(restored.sessionMessage == nil)
+    }
+
+    @Test
+    func loginRejectionsShowCredentialMessageAndStopLoading() async {
+        let rejected = LoginResponse(success: false)
+        let results: [Result<LoginResponse, Error>] = [.success(rejected), .failure(NetworkError.unauthorized)]
+        for result in results {
+            let model = LoginView.ViewModel(authService: LoginServiceStub(result: result))
+            #expect(await model.login() == nil)
+            #expect(model.errorMessage == "Incorrect username or password.")
+            #expect(!model.isBusy)
+        }
+    }
+
+    @Test
+    func loginHidesTechnicalErrorsAndClearsOldErrorsOnRetry() async {
+        let model = LoginView.ViewModel(authService: LoginServiceStub(
+            result: .failure(NetworkError.badResponse(statusCode: 503))))
+        #expect(await model.login() == nil)
+        #expect(model.errorMessage == "Unable to sign in. Please try again.")
+        #expect(!model.isBusy)
+
+        let successful = LoginView.ViewModel(authService: LoginServiceStub(
+            result: .success(Self.loginResponse(accessToken: "access", refreshToken: "refresh"))))
+        successful.errorMessage = "Previous error"
+        #expect(await successful.login() != nil)
+        #expect(successful.errorMessage.isEmpty)
+        #expect(!successful.isBusy)
     }
 
     private static func stubbedSession() -> URLSession {
@@ -324,4 +373,16 @@ private final class URLProtocolStub: URLProtocol {
     }
 
     override func stopLoading() {}
+}
+
+private struct LoginServiceStub: AuthServicing {
+    let result: Result<LoginResponse, Error>
+
+    func login(credentials: LoginModel) async throws -> LoginResponse {
+        try result.get()
+    }
+
+    func refreshToken(authToken: String, refreshToken: String) async throws -> LoginResponse {
+        throw NetworkError.unauthorized
+    }
 }

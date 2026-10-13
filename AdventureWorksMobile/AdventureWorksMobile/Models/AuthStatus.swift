@@ -29,6 +29,7 @@ final class AuthStatus: ObservableObject {
     // re-renders. `private(set)` means only this class can change the
     // value directly; outside code has to go through logIn or logout.
     @Published private(set) var isLoggedIn = false
+    @Published private(set) var sessionMessage: String?
 
 
     /// On app launch, check the Keychain for both tokens. If they're both
@@ -73,13 +74,19 @@ final class AuthStatus: ObservableObject {
             return false
         }
 
+        sessionMessage = nil
         withAnimation { isLoggedIn = true }
         return true
     }
 
-    func logout() {
+    func logout(sessionExpired: Bool = false) {
         tokenStore.deleteToken(key: authKey)
         tokenStore.deleteToken(key: refreshKey)
+
+        sessionMessage = sessionExpired
+            ? "Your session expired. Please sign in again."
+            : nil
+
         withAnimation { isLoggedIn = false }
     }
 }

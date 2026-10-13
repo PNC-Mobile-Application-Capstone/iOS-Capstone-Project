@@ -150,7 +150,7 @@ class RemoteRepositoryBase<Item: Codable> {
 
         var request = URLRequest(url: url)
         guard let auth = authStatus.authToken, !auth.isEmpty else {
-            authStatus.logout()
+            authStatus.logout(sessionExpired: true)
             throw NetworkError.missingAuthToken
         }
         request.setValue("Bearer \(auth)", forHTTPHeaderField: "Authorization")
@@ -186,7 +186,7 @@ class RemoteRepositoryBase<Item: Codable> {
                 guard !isRetry,
                       let refresh = authStatus.refreshToken, !refresh.isEmpty,
                       let auth = authStatus.authToken, !auth.isEmpty else {
-                    authStatus.logout()
+                    authStatus.logout(sessionExpired: true)
                     throw NetworkError.unauthorized
                 }
 
@@ -195,13 +195,13 @@ class RemoteRepositoryBase<Item: Codable> {
                     refreshResult = try await authService.refreshToken(authToken: auth,
                                                                        refreshToken: refresh)
                 } catch NetworkError.unauthorized {
-                    authStatus.logout()
+                    authStatus.logout(sessionExpired: true)
                     throw NetworkError.unauthorized
                 } catch NetworkError.badResponse(let statusCode) where (400...499).contains(statusCode) {
-                    authStatus.logout()
+                    authStatus.logout(sessionExpired: true)
                     throw NetworkError.unauthorized
                 } catch NetworkError.decodingFailed {
-                    authStatus.logout()
+                    authStatus.logout(sessionExpired: true)
                     throw NetworkError.unauthorized
                 }
 
@@ -209,7 +209,7 @@ class RemoteRepositoryBase<Item: Codable> {
                       authStatus.logIn(accessToken: refreshResult.accessToken,
                                        refreshToken: refreshResult.refreshToken),
                       let refreshedAccessToken = authStatus.authToken else {
-                    authStatus.logout()
+                    authStatus.logout(sessionExpired: true)
                     throw NetworkError.unauthorized
                 }
 
