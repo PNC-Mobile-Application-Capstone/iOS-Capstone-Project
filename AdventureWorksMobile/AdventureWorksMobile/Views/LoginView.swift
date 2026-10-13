@@ -19,51 +19,112 @@ struct LoginView: View {
 
 
     var body: some View {
-        VStack {
-            Text("Login")
-                .font(Font.largeTitle.bold())
+        ScrollView {
+            VStack(spacing: 32) {
+                header
 
-            TextField("Username", text: $viewModel.credentials.username)
-                .accessibilityIdentifier("usernameField")
-            SecureField("Password", text: $viewModel.credentials.password)
-                .accessibilityIdentifier("passwordField")
+                VStack(alignment: .leading, spacing: 24) {
 
-            if viewModel.isBusy {
-                ProgressView()
-            }
-
-            Button("Log in") {
-                Task {
-                    let response = await viewModel.login()
-                    if let resp = response {
-                        // On success, this is what actually flips the app
-                        // over to the logged-in state and persists the new
-                        // tokens to the Keychain (see AuthStatus.logIn).
-                        guard resp.success,
-                              authStatus.logIn(accessToken: resp.accessToken,
-                                               refreshToken: resp.refreshToken) else {
-                            viewModel.errorMessage = "The server did not return a valid session. Please try again."
-                            return
-                        }
+                    if let message = authStatus.sessionMessage {
+                        Label(message, systemImage: "info.circle")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .accessibilityIdentifier("sessionMessage")
                     }
+
+                    field("Username") {
+                        TextField("Enter your username", text: $viewModel.credentials.username)
+                            .textContentType(.username)
+                            .accessibilityIdentifier("usernameField")
+                    }
+
+                    field("Password") {
+                        SecureField("Enter your password", text: $viewModel.credentials.password)
+                            .textContentType(.password)
+                            .accessibilityIdentifier("passwordField")
+                    }
+
+                    if !viewModel.errorMessage.isEmpty {
+                        Label(viewModel.errorMessage, systemImage: "exclamationmark.circle")
+                            .font(.subheadline)
+                            .foregroundStyle(.red)
+                            .accessibilityIdentifier("loginErrorMessage")
+                    }
+
+                    Button(action: signIn) {
+                        HStack(spacing: 10) {
+                            if viewModel.isBusy { ProgressView().tint(.white) }
+                            Text(viewModel.isBusy ? "Signing in…" : "Sign in")
+                                .font(.headline)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .buttonBorderShape(.roundedRectangle(radius: 12))
+                    .tint(.green)
+                    .disabled(viewModel.loginDisabled)
+                    .accessibilityIdentifier("loginButton")
+                }
+                .padding(24)
+                .background(Color(uiColor: .secondarySystemGroupedBackground),
+                            in: RoundedRectangle(cornerRadius: 12))
+                .disabled(viewModel.isBusy)
+            }
+            .frame(maxWidth: 480)
+            .frame(maxWidth: .infinity)
+            .padding([.horizontal, .bottom], 24)
+        }
+        .background(Color(uiColor: .systemGroupedBackground).ignoresSafeArea())
+        .scrollDismissesKeyboard(.interactively)
+    }
+
+    private var header: some View {
+        VStack(spacing: 14) {
+            Image(systemName: "bicycle")
+                .font(.system(size: 36, weight: .semibold))
+                .foregroundStyle(.green)
+                .frame(width: 80, height: 80)
+                .background(.green.opacity(0.12), in: RoundedRectangle(cornerRadius: 20))
+                .accessibilityHidden(true)
+
+            Text("Adventure Works")
+                .font(.largeTitle.bold())
+                .multilineTextAlignment(.center)
+                .accessibilityAddTraits(.isHeader)
+        }
+        .padding(.top, 32)
+    }
+
+    private func field<Content: View>(
+        _ title: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title).font(.subheadline.weight(.medium))
+
+            content()
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .padding(14)
+                .background(Color(uiColor: .tertiarySystemGroupedBackground),
+                            in: RoundedRectangle(cornerRadius: 12))
+        }
+    }
+
+    private func signIn() {
+        Task {
+            if let response = await viewModel.login() {
+                guard response.success,
+                      authStatus.logIn(accessToken: response.accessToken,
+                                       refreshToken: response.refreshToken) else {
+                    viewModel.errorMessage = "Unable to sign in. Please try again."
+                    return
                 }
             }
-            .buttonStyle(.borderedProminent)
-            .disabled(viewModel.loginDisabled)
-            .accessibilityIdentifier("loginButton")
-
-            if !viewModel.errorMessage.isEmpty {
-                Text(viewModel.errorMessage)
-                    .foregroundColor(Color.red)
-            }
-
-            Spacer()
-
         }
-        .padding(20)
-        .autocapitalization(.none)
-        .disabled(viewModel.isBusy)
     }
+
 }
 
 extension LoginView {
@@ -78,6 +139,12 @@ extension LoginView {
     @MainActor
     @Observable
     class ViewModel {
+
+        private let authService: any AuthServicing
+
+        init(authService: (any AuthServicing)? = nil) {
+            self.authService = authService ?? AuthService.shared
+        }
 
         var credentials = LoginModel()
         var isBusy = false
@@ -94,22 +161,25 @@ extension LoginView {
         /// button action) is responsible for calling
         /// authStatus.logIn with the result.
         func login() async -> LoginResponse? {
+            errorMessage = ""
             isBusy = true
+            defer { isBusy = false }
 
             do {
-                let result = try await AuthService.shared.login(credentials: credentials)
-                isBusy = false
+                let result = try await authService.login(credentials: credentials)
 
                 if !result.success {
-                    errorMessage = "Invalid username/password combination"
+                    errorMessage = "Incorrect username or password."
+                    return nil
                 }
                 return result
             }
-            catch {
-                errorMessage = error.localizedDescription
-
+            catch NetworkError.unauthorized {
+                errorMessage = "Incorrect username or password."
             }
-            isBusy = false
+            catch {
+                errorMessage = "Unable to sign in. Please try again."
+            }
             return nil
         }
 
