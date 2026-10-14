@@ -137,8 +137,7 @@ extension CustomerOrderList {
                 let (rows, source) = try await repository.getAll()
                 self.source = source
 
-                // Group the API rows into orders once, here, instead of on
-                // every redraw.
+                // Group the API rows into orders once, here, instead of on every redraw.
                 let grouped = Dictionary(grouping: rows, by: \.orderNumber)
                     .map { OrderGroup(orderNumber: $0.key, rows: $0.value) }
                     .sorted { $0.orderNumber < $1.orderNumber }
