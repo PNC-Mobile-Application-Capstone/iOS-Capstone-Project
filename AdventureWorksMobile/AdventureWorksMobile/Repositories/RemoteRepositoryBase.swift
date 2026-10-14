@@ -234,6 +234,7 @@ class RemoteRepositoryBase<Item: Codable> {
                 decoder.userInfo[CodingUserInfoKey.managedObjectContext] = context
             }
             decoder.keyDecodingStrategy = .convertFromSnakeCase
+            decoder.useStringDecoderForDate()
             return try decoder.decode(type, from: data)
         }
 

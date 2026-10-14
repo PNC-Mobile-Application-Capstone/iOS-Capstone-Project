@@ -26,7 +26,8 @@ extension JSONDecoder {
                 return date
             }
 
-            dateFormatter.formatOptions = [.withInternetDateTime]
+            dateFormatter.formatOptions = [.withFullDate, .withTime, .withDashSeparatorInDate, .withColonSeparatorInTime]
+            dateFormatter.timeZone = .current
             if let date = dateFormatter.date(from: value) {
                 return date
             }
