@@ -26,7 +26,7 @@ struct DashboardView: View {
                 }
                 
                 Section("Weekly Sales") {
-                    ForEach(viewModel.weeklySales) { entry in
+                    ForEach(viewModel.lastWeekSales) { entry in
                         HStack {
                             Text(entry.salesDate, format: .dateTime.weekday(.abbreviated))
                             Spacer()
@@ -115,37 +115,49 @@ extension DashboardView {
             self.repository = repository
         }
         
+        var lastWeekSales: [WeeklySalesEntry] {
+            guard let newest = weeklySales.map(\.salesDate).max(),
+                  let cutoff = Calendar.current.date(byAdding: .day, value: -6, to: newest)
+            else { return [] }
+
+            return weeklySales
+                .filter { $0.salesDate >= cutoff }
+                .sorted { $0.salesDate < $1.salesDate }
+        }
+        
         var totalSales: Double {
-            weeklySales.reduce(0) { $0 + $1.totalSales }
+            lastWeekSales.reduce(0) { $0 + $1.totalSales }
         }
         
         var totalProfit: Double {
-            weeklySales.reduce(0) { $0 + $1.totalProfit }
+            lastWeekSales.reduce(0) { $0 + $1.totalProfit }
         }
         
         var topSellers: [ProductPerformanceEntry] {
-            Array(productPerformance.sorted { $0.unitsSold > $1.unitsSold }.prefix(2))
+            Array(productPerformance.sorted { $0.unitsSold > $1.unitsSold }.prefix(1))
         }
         
         var underperformers: [ProductPerformanceEntry] {
-            Array(productPerformance.sorted { $0.unitsSold < $1.unitsSold }.prefix(2))
+            Array(productPerformance.sorted { $0.unitsSold < $1.unitsSold }.prefix(1))
         }
         
         func loadData() async {
-            do {
-                async let sales = repository.getWeeklySales()
-                async let performance = repository.getProductPerformance()
-                async let stock = repository.getLowStock()
-                async let staffShifts = repository.getShifts()
-                
-                weeklySales = try await sales
-                productPerformance = try await performance
-                lowStock = try await stock
-                shifts = try await staffShifts
-            }
-            catch {
-                print("Failed to load dashboard data: \(error)")
-            }
+            async let sales = repository.getWeeklySales()
+            async let performance = repository.getProductPerformance()
+            async let stock = repository.getLowStock()
+            async let staffShifts = repository.getShifts()
+
+            do { weeklySales = try await sales }
+            catch { print("weekly-sales failed: \(error)") }
+
+            do { productPerformance = try await performance }
+            catch { print("best-worst failed: \(error)") }
+
+            do { lowStock = try await stock }
+            catch { print("low-stock failed: \(error)") }
+
+            do { shifts = try await staffShifts }
+            catch { print("shifts failed: \(error)") }
         }
         
     }

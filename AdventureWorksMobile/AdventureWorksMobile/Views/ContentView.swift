@@ -16,7 +16,7 @@ struct ContentView: View {
     
     var body: some View {
         TabView {
-            DashboardView(repository: MockDashboardRepository())
+            DashboardView(repository: RemoteDashboardRepository(authStatus: authStatus))
                 .accessibilityIdentifier("dashboardView")
                 .tabItem { Label("Dashboard", systemImage: "house.fill") }
             
