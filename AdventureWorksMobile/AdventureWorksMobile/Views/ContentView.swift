@@ -10,13 +10,9 @@ import SwiftUI
 struct ContentView: View {
     @EnvironmentObject var authStatus: AuthStatus
     
-    // @State is SwiftUI's property wrapper for view-local, mutable state:
-    // changing `current` automatically triggers a re-render of this view's body.
-    @State private var current: String = ""
-    
     var body: some View {
         TabView {
-            DashboardView(repository: MockDashboardRepository())
+            DashboardView(repository: RemoteDashboardRepository(authStatus: authStatus))
                 .accessibilityIdentifier("dashboardView")
                 .tabItem { Label("Dashboard", systemImage: "house.fill") }
             
@@ -28,11 +24,13 @@ struct ContentView: View {
                 .accessibilityIdentifier("customerOrderView")
                 .tabItem { Label("Orders", systemImage: "list.bullet.circle.fill") }
             
+            EmployeeList()
+                .accessibilityIdentifier("employeeListView")
+                .tabItem { Label("Employees", systemImage: "person.3.fill") }
+            
             AccountView()
                 .accessibilityIdentifier("accountView")
                 .tabItem { Label("Account", systemImage: "person.crop.circle")}
-            
-            // Add employee list and order list when theyre ready
         }
     }
 }
