@@ -36,7 +36,6 @@ struct EmployeeDetails: View {
                 DateText(date: employee.hireDate)
             }
             .padding(5)
-
             
             Spacer()
         }
