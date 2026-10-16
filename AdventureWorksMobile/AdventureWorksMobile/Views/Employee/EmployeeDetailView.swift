@@ -20,6 +20,7 @@ struct EmployeeDetails: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("\(employee.firstName) \(employee.lastName)")
+                .font(.largeTitle)
                 .fontWeight(.bold)
                 .padding(5)
 
