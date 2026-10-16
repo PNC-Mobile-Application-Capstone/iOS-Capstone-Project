@@ -18,30 +18,34 @@ struct EmployeeDetails: View {
 //    @State private var photoData: Data?
 
     var body: some View {
-        NavigationStack {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("\(employee.firstName) \(employee.lastName)")
-                    .font(.default)
-                    .padding(5)
+        VStack(alignment: .leading, spacing: 8) {
+            Text("\(employee.firstName) \(employee.lastName)")
+                .fontWeight(.bold)
+                .padding(5)
 
-                Text(employee.jobTitle)
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
+            Text(employee.jobTitle)
+                .font(.title)
+                .padding(5)
 
-                Text(employee.department)
-                    .padding(5)
-                
-                Text(employee.hireDate ?? "ERROR")
-                    .padding(5)
-                
-                
-                if employee.shift != nil  { Text(employee.shift!).padding(5) }
-                
+            Text("\(employee.shift != nil ? "\(employee.shift!) shift in the" : "") \(employee.department) Department")
+                .padding(5)
+            
+            HStack {
+                Text("Hired on")
+                DateText(date: employee.hireDate)
             }
+            .padding(5)
+
+            
+            Spacer()
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
     }
 
 }
 
-#Preview { EmployeeList() }
+
+#Preview {
+    EmployeeList()
+}
