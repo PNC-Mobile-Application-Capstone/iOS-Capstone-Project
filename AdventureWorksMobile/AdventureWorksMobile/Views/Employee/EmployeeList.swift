@@ -17,7 +17,6 @@ struct EmployeeList: View {
         NavigationStack {
             VStack(spacing: 0) {
                 ListHeader(title: "Employees",
-                           source: viewModel.source,
                            errorMessage: viewModel.errorMessage)
 
                 List {

@@ -10,14 +10,63 @@ import SwiftUI
 struct ProductList: View {
 
     @State private var viewModel = ViewModel()
+    @State private var isSearchVisible = false
     @Environment(\.productRepository) private var repository
+
+    private var searchButtonTitle: String {
+        if isSearchVisible {
+            return "Hide search"
+        }
+
+        if viewModel.searchText.isEmpty {
+            return "Search"
+        }
+
+        return "Search: \(viewModel.searchText)"
+    }
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
                 ListHeader(title: "Products",
-                           source: viewModel.source,
                            errorMessage: viewModel.errorMessage)
+
+                VStack(spacing: 4) {
+                    HStack {
+                        Button {
+                            isSearchVisible.toggle()
+                        } label: {
+                            Label(searchButtonTitle, systemImage: "magnifyingglass")
+                        }
+                        .accessibilityIdentifier("productSearchButton")
+                        Spacer()
+                        Button("Clear", action: viewModel.clearCriteria)
+                            .disabled(!viewModel.hasActiveCriteria)
+                            .accessibilityIdentifier("clearCriteriaButton")
+                    }
+                    .padding(.vertical, 4)
+
+                    if isSearchVisible {
+                        TextField("Search name or product number", text: $viewModel.searchText)
+                            .textFieldStyle(.roundedBorder)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .accessibilityIdentifier("productSearchField")
+                    }
+                    HStack {
+                        Text("Sort by")
+                            .font(.subheadline)
+                        Spacer()
+                        Picker("Sort by", selection: $viewModel.sortOption) {
+                            ForEach(SortOption.allCases) { option in
+                                Text(option.rawValue).tag(option)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .accessibilityIdentifier("productSortPicker")
+                    }
+                }
+                .padding(.horizontal)
 
                 List {
                     ForEach(viewModel.items.shown) { item in
@@ -38,6 +87,12 @@ struct ProductList: View {
                         LoadMoreRow { viewModel.items.loadMore() }
                     }
                 }
+                .overlay {
+                    if !viewModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                       viewModel.items.all.isEmpty {
+                        ContentUnavailableView.search(text: viewModel.searchText)
+                    }
+                }
             }
             .background(Color(.systemGroupedBackground))
             // Title is drawn by ListHeader so it stays put while the list
@@ -51,6 +106,15 @@ struct ProductList: View {
 
 extension ProductList {
 
+    enum SortOption: String, CaseIterable, Identifiable {
+        case name = "Name (A–Z)"
+        case priceAscending = "Price: low to high"
+        case priceDescending = "Price: high to low"
+
+        var id: String { rawValue }
+    }
+
+    @MainActor
     @Observable
     class ViewModel {
         /// Every product, revealed a page at a time as the user scrolls.
@@ -58,13 +122,46 @@ extension ProductList {
         var source: CachedDataSource = .notcached
         var errorMessage: String = ""
 
+        private var allProducts: [Product] = []
+        var searchText = "" { didSet { applyCriteria(resetPage: true) } }
+        var sortOption: SortOption = .name { didSet { applyCriteria(resetPage: true) } }
+
+        var hasActiveCriteria: Bool { !searchText.isEmpty || sortOption != .name }
+
+        func clearCriteria() {
+            searchText = ""
+            sortOption = .name
+        }
+
+        func setProducts(_ values: [Product]) {
+            allProducts = values
+            applyCriteria(resetPage: false)
+        }
+
+        private func applyCriteria(resetPage: Bool) {
+            let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+            let matches = allProducts.filter { product in
+                query.isEmpty || (product.name ?? "").localizedStandardContains(query)
+                    || (product.productNumber ?? "").localizedStandardContains(query)
+            }
+            let sorted = matches.sorted { left, right in
+                if sortOption != .name, left.listPrice != right.listPrice {
+                    return sortOption == .priceAscending
+                        ? left.listPrice < right.listPrice : left.listPrice > right.listPrice
+                }
+                let comparison = (left.name ?? "").localizedStandardCompare(right.name ?? "")
+                return comparison == .orderedSame ? left.id < right.id : comparison == .orderedAscending
+            }
+            items.replace(with: sorted, resetPage: resetPage)
+        }
+
         func loadData(repository: (any TieredCacheRepositoryProtocol<Product>)?) async {
             guard let repository = repository else { return }
 
             do {
                 let (products, source) = try await repository.getAll()
                 self.source = source
-                items.replace(with: products)
+                setProducts(products)
                 print("Loaded \(products.count) items from \(source)")
             } catch {
                 errorMessage = error.localizedDescription
