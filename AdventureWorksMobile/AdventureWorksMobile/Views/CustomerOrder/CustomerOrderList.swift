@@ -13,14 +13,53 @@ import SwiftUI
 struct CustomerOrderList: View {
 
     @State private var viewModel = ViewModel()
+    @State private var isSearchVisible = false
     @Environment(\.customerOrderRepository) private var repository
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
                 ListHeader(title: "Orders",
-                           source: viewModel.source,
                            errorMessage: viewModel.errorMessage)
+
+                VStack(spacing: 4) {
+                    HStack {
+                        Button {
+                            isSearchVisible.toggle()
+                        } label: {
+                            Label(isSearchVisible ? "Hide search" :
+                                    (viewModel.searchText.isEmpty ? "Search" : "Search: \(viewModel.searchText)"),
+                                  systemImage: "magnifyingglass")
+                        }
+                        .accessibilityIdentifier("orderSearchButton")
+                        Spacer()
+                        Button("Clear", action: viewModel.clearCriteria)
+                            .disabled(!viewModel.hasActiveCriteria)
+                            .accessibilityIdentifier("clearCriteriaButton")
+                    }
+                    .padding(.vertical, 4)
+
+                    if isSearchVisible {
+                        TextField("Search customer or order number", text: $viewModel.searchText)
+                            .textFieldStyle(.roundedBorder)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .accessibilityIdentifier("orderSearchField")
+                    }
+                    HStack {
+                        Text("Sort by")
+                            .font(.subheadline)
+                        Spacer()
+                        Picker("Sort by", selection: $viewModel.sortOption) {
+                            ForEach(SortOption.allCases) { option in
+                                Text(option.rawValue).tag(option)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .accessibilityIdentifier("orderSortPicker")
+                    }
+                }
+                .padding(.horizontal)
 
                 List {
                     ForEach(viewModel.orders.shown) { order in
@@ -34,6 +73,9 @@ struct CustomerOrderList: View {
                                     Text(order.total, format: .currency(code: "USD"))
                                         .foregroundStyle(.secondary)
                                 }
+                                Text(order.customerName)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .foregroundStyle(.secondary)
                                 HStack {
                                     Text("Ordered:")
                                     Spacer()
@@ -47,6 +89,12 @@ struct CustomerOrderList: View {
                     // Reached the last loaded order: show the next page.
                     if viewModel.orders.hasMore {
                         LoadMoreRow { viewModel.orders.loadMore() }
+                    }
+                }
+                .overlay {
+                    if !viewModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                       viewModel.orders.all.isEmpty {
+                        ContentUnavailableView.search(text: viewModel.searchText)
                     }
                 }
             }
@@ -93,6 +141,7 @@ struct OrderLine: Identifiable, Hashable {
 struct OrderGroup: Identifiable, Hashable {
     let orderNumber: Int64
     let orderDate: String?
+    let sortDate: Date?
     let shipDate: String?
     let customerId: Int64?
     let customerName: String
@@ -106,6 +155,7 @@ struct OrderGroup: Identifiable, Hashable {
         let first = sorted.first
 
         self.orderNumber = orderNumber
+        self.sortDate = DateText.parseDate(first?.orderDate)
         self.orderDate = first?.orderDate
         self.shipDate = first?.shipDate
         self.customerId = first?.customerId
@@ -123,12 +173,58 @@ struct OrderGroup: Identifiable, Hashable {
 
 extension CustomerOrderList {
 
+    enum SortOption: String, CaseIterable, Identifiable {
+        case number = "Order number (ascending)"
+        case newest = "Newest first"
+        case oldest = "Oldest first"
+
+        var id: String { rawValue }
+    }
+
+    @MainActor
     @Observable
     class ViewModel {
         /// Every order, revealed a page at a time as the user scrolls.
         var orders = PagedItems<OrderGroup>(pageSize: 25)
         var source: CachedDataSource = .notcached
         var errorMessage: String = ""
+
+        private var allOrders: [OrderGroup] = []
+        var searchText = "" { didSet { applyCriteria(resetPage: true) } }
+        var sortOption: SortOption = .number { didSet { applyCriteria(resetPage: true) } }
+
+        var hasActiveCriteria: Bool { !searchText.isEmpty || sortOption != .number }
+
+        func clearCriteria() {
+            searchText = ""
+            sortOption = .number
+        }
+
+        func setOrders(_ values: [OrderGroup]) {
+            allOrders = values
+            applyCriteria(resetPage: false)
+        }
+
+        private func applyCriteria(resetPage: Bool) {
+            let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+            let matches = allOrders.filter { order in
+                query.isEmpty || order.customerName.localizedStandardContains(query)
+                    || String(order.orderNumber).contains(query)
+            }
+            let sorted = matches.sorted { left, right in
+                if sortOption != .number {
+                    switch (left.sortDate, right.sortDate) {
+                    case let (leftDate?, rightDate?) where leftDate != rightDate:
+                        return sortOption == .newest ? leftDate > rightDate : leftDate < rightDate
+                    case (_?, nil): return true
+                    case (nil, _?): return false
+                    default: break
+                    }
+                }
+                return left.orderNumber < right.orderNumber
+            }
+            orders.replace(with: sorted, resetPage: resetPage)
+        }
 
         func loadData(repository: (any TieredCacheRepositoryProtocol<CustomerOrder>)?) async {
             guard let repository = repository else { return }
@@ -141,8 +237,7 @@ extension CustomerOrderList {
                 // every redraw.
                 let grouped = Dictionary(grouping: rows, by: \.orderNumber)
                     .map { OrderGroup(orderNumber: $0.key, rows: $0.value) }
-                    .sorted { $0.orderNumber < $1.orderNumber }
-                orders.replace(with: grouped)
+                setOrders(grouped)
 
                 print("Loaded \(rows.count) lines in \(grouped.count) orders from \(source)")
             } catch {

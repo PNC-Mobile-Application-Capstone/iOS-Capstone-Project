@@ -32,9 +32,10 @@ struct PagedItems<Item: Identifiable> {
 
     /// Swaps in fresh data. Keeps how far the user has scrolled, so coming
     /// back from a details page does not jump them to the top.
-    mutating func replace(with items: [Item]) {
+    /// Search and sort changes pass resetPage to start with the first page.
+    mutating func replace(with items: [Item], resetPage: Bool = false) {
         all = items
-        shownCount = max(shownCount, pageSize)
+        shownCount = resetPage ? pageSize : max(shownCount, pageSize)
     }
 
     /// Reveals the next page.

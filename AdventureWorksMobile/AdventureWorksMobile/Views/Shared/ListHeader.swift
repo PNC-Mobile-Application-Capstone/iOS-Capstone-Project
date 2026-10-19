@@ -15,7 +15,6 @@ import SwiftUI
 /// `.navigationTitle` so the back button on the next page has a label.
 struct ListHeader: View {
     let title: String
-    var source: CachedDataSource
     var errorMessage: String = ""
 
     var body: some View {
@@ -29,10 +28,6 @@ struct ListHeader: View {
                     .font(.subheadline)
                     .foregroundStyle(.red)
             }
-
-            Text(source.label)
-                .font(.caption)
-                .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal)
@@ -41,18 +36,6 @@ struct ListHeader: View {
     }
 }
 
-extension CachedDataSource {
-    /// Short text shown under the header title.
-    var label: String {
-        switch self {
-        case .memory:       "cached in memory"
-        case .disk:         "local disk cache"
-        case .notcached:    "fresh api data"
-        case .staleDisk:    "stale disk"
-        }
-    }
-}
-
 #Preview {
-    ListHeader(title: "Orders", source: .memory)
+    ListHeader(title: "Orders")
 }
