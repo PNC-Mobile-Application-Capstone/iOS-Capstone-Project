@@ -17,5 +17,12 @@ protocol TieredCacheRepositoryProtocol<Item> {
 
     associatedtype Item: Identifiable, Codable
 
-    func getAll() async throws -> ([Item], CachedDataSource)
+    func getAll(forceRefresh: Bool) async throws -> ([Item], CachedDataSource)
+}
+
+extension TieredCacheRepositoryProtocol {
+    
+    func getAll() async throws -> ([Item], CachedDataSource) {
+        try await getAll(forceRefresh: false)
+    }
 }
