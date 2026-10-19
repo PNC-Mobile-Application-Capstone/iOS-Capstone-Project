@@ -45,6 +45,9 @@ struct EmployeeList: View {
                         LoadMoreRow { viewModel.items.loadMore() }
                     }
                 }
+                .refreshable {
+                    await viewModel.loadData(repository: repository, forceRefresh: true)
+                }
             }
             .background(Color(.systemGroupedBackground))
             // Title is drawn by ListHeader so it stays put while the list
@@ -106,11 +109,11 @@ extension EmployeeList {
             items.replace(with: allEmployees.sorted(using: sort.comparators))
         }
         
-        func loadData(repository: (any TieredCacheRepositoryProtocol<Employee>)?) async {
+        func loadData(repository: (any TieredCacheRepositoryProtocol<Employee>)?, forceRefresh: Bool=false) async {
             guard let repository = repository else { return }
 
             do {
-                let (employees, source) = try await repository.getAll()
+                let (employees, source) = try await repository.getAll(forceRefresh: forceRefresh)
                 self.source = source
                 allEmployees = employees.map(EmployeeRow.init)   // copy out of Core Data
                 

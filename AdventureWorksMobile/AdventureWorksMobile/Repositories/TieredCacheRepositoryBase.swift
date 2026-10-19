@@ -55,11 +55,14 @@ class TieredCacheRepositoryBase<Item: NSManagedObject & Codable & Identifiable>:
         super.implicitContext = context
     }
 
-    func getAll() async throws -> ([Item], CachedDataSource) {
+    func getAll(forceRefresh: Bool) async throws -> ([Item], CachedDataSource) {
         let currentDate = now()
-
-        if let box = memoryCache.object(forKey: urlBase as NSString),
-           currentDate.timeIntervalSince(box.timestamp) <= maxAge { return (box.items, .memory) }
+        
+        // Bypass cache on force refreshes
+        if !forceRefresh {
+            if let box = memoryCache.object(forKey: urlBase as NSString),
+               currentDate.timeIntervalSince(box.timestamp) <= maxAge { return (box.items, .memory) }
+        }
 
         guard let context else { throw CachingConfigurationError.missingManagedObjectContext }
 
@@ -67,8 +70,9 @@ class TieredCacheRepositoryBase<Item: NSManagedObject & Codable & Identifiable>:
             let request = NSFetchRequest<Item>(entityName: String(describing: Item.self))
             return try context.fetch(request)
         }
+        
 
-        if !diskResults.isEmpty,
+        if !forceRefresh, !diskResults.isEmpty,
            let diskTimestamp = defaults.object(forKey: timestampKey) as? Date,
            currentDate.timeIntervalSince(diskTimestamp) <= maxAge {
             memoryCache.setObject(

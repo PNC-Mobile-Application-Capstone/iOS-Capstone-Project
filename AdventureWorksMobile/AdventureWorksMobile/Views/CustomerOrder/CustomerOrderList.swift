@@ -97,6 +97,9 @@ struct CustomerOrderList: View {
                         ContentUnavailableView.search(text: viewModel.searchText)
                     }
                 }
+                .refreshable {
+                    await viewModel.loadData(repository: repository, forceRefresh: true)
+                }
             }
             .background(Color(.systemGroupedBackground))
             // The title is drawn by ListHeader so it stays put while the list
@@ -226,11 +229,11 @@ extension CustomerOrderList {
             orders.replace(with: sorted, resetPage: resetPage)
         }
 
-        func loadData(repository: (any TieredCacheRepositoryProtocol<CustomerOrder>)?) async {
+        func loadData(repository: (any TieredCacheRepositoryProtocol<CustomerOrder>)?, forceRefresh: Bool=false) async {
             guard let repository = repository else { return }
 
             do {
-                let (rows, source) = try await repository.getAll()
+                let (rows, source) = try await repository.getAll(forceRefresh: forceRefresh)
                 self.source = source
 
                 // Group the API rows into orders once, here, instead of on every redraw.

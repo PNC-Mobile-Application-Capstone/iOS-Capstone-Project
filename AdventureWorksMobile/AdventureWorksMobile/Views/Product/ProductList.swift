@@ -93,6 +93,9 @@ struct ProductList: View {
                         ContentUnavailableView.search(text: viewModel.searchText)
                     }
                 }
+                .refreshable {
+                    await viewModel.loadData(repository: repository, forceRefresh: true)
+                }
             }
             .background(Color(.systemGroupedBackground))
             // Title is drawn by ListHeader so it stays put while the list
@@ -155,11 +158,11 @@ extension ProductList {
             items.replace(with: sorted, resetPage: resetPage)
         }
 
-        func loadData(repository: (any TieredCacheRepositoryProtocol<Product>)?) async {
+        func loadData(repository: (any TieredCacheRepositoryProtocol<Product>)?, forceRefresh: Bool = false) async {
             guard let repository = repository else { return }
 
             do {
-                let (products, source) = try await repository.getAll()
+                let (products, source) = try await repository.getAll(forceRefresh: forceRefresh)
                 self.source = source
                 setProducts(products)
                 print("Loaded \(products.count) items from \(source)")
