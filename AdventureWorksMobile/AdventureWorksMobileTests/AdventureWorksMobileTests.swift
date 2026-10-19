@@ -275,6 +275,122 @@ struct AdventureWorksMobileTests {
         #expect(!successful.isBusy)
     }
 
+    @Test
+    func productDiscoverySearchesBeyondFirstPageAndResetsCriteria() {
+        let context = PersistenceController(inMemory: true).container.viewContext
+        let products = (1...30).map { index in
+            let product = Product(context: context)
+            product.id = Int64(index)
+            product.name = "Bike \(index)"
+            product.productNumber = "AW-\(index)"
+            product.listPrice = Double(index)
+            return product
+        }
+        let model = ProductList.ViewModel()
+        model.setProducts(products)
+        #expect(model.items.shown.count == 25)
+        model.items.loadMore()
+        #expect(model.items.shown.count == 30)
+
+        model.searchText = "  aw-30  "
+        #expect(model.items.all.map(\.id) == [30])
+        #expect(model.hasActiveCriteria)
+        model.searchText = "BIKE"
+        model.sortOption = .priceDescending
+        #expect(model.items.all.first?.id == 30)
+        #expect(model.items.all.last?.id == 1)
+        #expect(model.items.shown.count == 25)
+        model.sortOption = .priceAscending
+        #expect(model.items.all.first?.id == 1)
+        model.searchText = "no matching record"
+        #expect(model.items.all.isEmpty)
+
+        model.clearCriteria()
+        #expect(model.searchText.isEmpty)
+        #expect(model.sortOption == .name)
+        #expect(!model.hasActiveCriteria)
+        #expect(model.items.all.count == 30)
+        #expect(model.items.shown.count == 25)
+    }
+
+    @Test
+    func productPriceTiesUseNameThenIDAndAcceptMissingNames() {
+        let context = PersistenceController(inMemory: true).container.viewContext
+        let products = ["Beta", "Alpha", "Alpha", nil].enumerated().map { index, name in
+            let product = Product(context: context)
+            product.id = Int64(index + 1)
+            product.name = name
+            product.listPrice = 10
+            return product
+        }
+        let model = ProductList.ViewModel()
+        model.setProducts(products)
+        model.sortOption = .priceAscending
+        #expect(model.items.all.map(\.id) == [4, 2, 3, 1])
+        model.sortOption = .priceDescending
+        #expect(model.items.all.map(\.id) == [4, 2, 3, 1])
+    }
+
+    @Test
+    func orderDiscoveryCombinesCustomerSearchAndDateSorting() {
+        let context = PersistenceController(inMemory: true).container.viewContext
+        func group(_ number: Int64, _ name: String, _ date: String?) -> OrderGroup {
+            let row = CustomerOrder(context: context)
+            row.id = number
+            row.orderNumber = number
+            row.firstName = name
+            row.lastName = "Lee"
+            row.orderDate = date
+            return OrderGroup(orderNumber: number, rows: [row])
+        }
+        let groups = [
+            group(100, "Jordan", "2026-10-15T23:00:00-04:00"),
+            group(200, "Jordan", "2026-10-16T02:00:00Z"),
+            group(300, "Jordan", "not a date"),
+            group(400, "Priya", "2026-10-17"),
+            group(500, "Jordan", nil)
+        ]
+        let model = CustomerOrderList.ViewModel()
+        model.setOrders(groups)
+        model.searchText = "  jOrDaN  "
+        model.sortOption = .newest
+        #expect(model.orders.all.map(\.id) == [100, 200, 300, 500])
+        model.sortOption = .oldest
+        #expect(model.orders.all.map(\.id) == [200, 100, 300, 500])
+        model.searchText = "40"
+        #expect(model.orders.all.map(\.id) == [400])
+        model.searchText = "no matching customer"
+        #expect(model.orders.all.isEmpty)
+        model.clearCriteria()
+        #expect(model.orders.all.map(\.id) == [100, 200, 300, 400, 500])
+        #expect(model.searchText.isEmpty)
+        #expect(!model.hasActiveCriteria)
+    }
+
+    @Test
+    func orderDiscoverySearchesBeyondFirstPageAndResetsPaging() {
+        let context = PersistenceController(inMemory: true).container.viewContext
+        let groups = (1...30).map { index in
+            let row = CustomerOrder(context: context)
+            row.id = Int64(index)
+            row.orderNumber = Int64(index)
+            row.firstName = "Customer"
+            row.orderDate = "2026-10-16"
+            return OrderGroup(orderNumber: row.orderNumber, rows: [row])
+        }
+        let model = CustomerOrderList.ViewModel()
+        model.setOrders(groups)
+        model.orders.loadMore()
+        #expect(model.orders.shown.count == 30)
+        model.searchText = "30"
+        #expect(model.orders.all.map(\.id) == [30])
+        model.clearCriteria()
+        #expect(model.orders.all.count == 30)
+        #expect(model.orders.shown.count == 25)
+        model.sortOption = .newest
+        #expect(model.orders.all.map(\.id) == Array(1...30).map(Int64.init))
+    }
+
     private static func stubbedSession() -> URLSession {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [URLProtocolStub.self]
