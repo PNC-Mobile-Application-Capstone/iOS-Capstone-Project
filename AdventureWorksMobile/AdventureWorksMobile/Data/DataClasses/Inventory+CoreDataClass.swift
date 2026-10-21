@@ -11,6 +11,7 @@ public import CoreData
 
 public typealias InventoryCoreDataClassSet = NSSet
 
+// @objc gives the class the name Core Data looks up in the data model.
 @objc(Inventory)
 public class Inventory: NSManagedObject, Codable {
 
@@ -19,32 +20,35 @@ public class Inventory: NSManagedObject, Codable {
              quantity, reorderPoint, safetyStockLevel, shelf
     }
 
+    // Decodes one JSON object straight into a new Core Data object.
     public required convenience init(from decoder: any Decoder) throws {
 
+        // Get the Core Data context the repository put in userInfo, or stop.
         guard let context = decoder.userInfo[CodingUserInfoKey.managedObjectContext] as? NSManagedObjectContext
         else { throw DecoderConfigurationError.missingManagedObjectContext }
 
         self.init(context: context)
 
+        // Read each JSON field by its CodingKeys name.
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
-        // Required. A row is useless without its key, its count, and the
-        // two thresholds we compare the count against.
+        // Required fields. A row is useless without these.
         self.productId = try container.decode(Int64.self, forKey: .productId)
         self.locationId = try container.decode(Int64.self, forKey: .locationId)
         self.quantity = try container.decode(Int64.self, forKey: .quantity)
         self.reorderPoint = try container.decode(Int64.self, forKey: .reorderPoint)
         self.safetyStockLevel = try container.decode(Int64.self, forKey: .safetyStockLevel)
 
-        // Optional. A null here shows a placeholder instead of breaking
-        // the whole list.
+        // Optional fields. A null shows a placeholder instead of breaking the list.
         self.productName = try container.decodeIfPresent(String.self, forKey: .productName)
         self.productNumber = try container.decodeIfPresent(String.self, forKey: .productNumber)
         self.locationName = try container.decodeIfPresent(String.self, forKey: .locationName)
         self.shelf = try container.decodeIfPresent(String.self, forKey: .shelf)
+        // Core Data stores an optional number as NSNumber, so wrap the Int64.
         self.bin = try container.decodeIfPresent(Int64.self, forKey: .bin).map { NSNumber(value: $0) }
     }
 
+    // Writes the object back out as JSON.
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
 

@@ -9,6 +9,7 @@ import XCTest
 
 final class AdventureWorksMobileUITestsLaunchTests: XCTestCase {
 
+    // Run once per UI setup, like light and dark mode.
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
         true
     }
@@ -22,11 +23,9 @@ final class AdventureWorksMobileUITestsLaunchTests: XCTestCase {
         let app = XCUIApplication()
         app.launch()
 
-        // Insert steps here to perform after app launch but before taking a screenshot,
-        // such as logging into a test account or navigating somewhere in the app
-        // XCUIAutomation Documentation
-        // https://developer.apple.com/documentation/xcuiautomation
+        // Add steps to run before the screenshot. Docs: https://developer.apple.com/documentation/xcuiautomation
 
+        // Save a screenshot of the launch screen with the test results.
         let attachment = XCTAttachment(screenshot: app.screenshot())
         attachment.name = "Launch Screen"
         attachment.lifetime = .keepAlways

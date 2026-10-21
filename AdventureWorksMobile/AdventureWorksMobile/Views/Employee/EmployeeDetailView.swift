@@ -14,8 +14,6 @@ struct EmployeeDetails: View {
 
     var employee: EmployeeRow
     
-    // Photo bytes for this page. The repository handles caching and Core Data.
-//    @State private var photoData: Data?
 
     var body: some View {
         NavigationStack {
@@ -35,6 +33,7 @@ struct EmployeeDetails: View {
                     .padding(5)
                 
                 
+                // ! force-unwraps shift, which is safe after the nil check.
                 if employee.shift != nil  { Text(employee.shift!).padding(5) }
                 
             }

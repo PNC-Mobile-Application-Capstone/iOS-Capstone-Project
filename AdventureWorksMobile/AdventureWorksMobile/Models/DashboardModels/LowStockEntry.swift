@@ -15,6 +15,7 @@ struct LowStockEntry: Identifiable, Codable {
 
     var id: Int { productId }
     
+    // Critical when stock is below half the reorder point.
     var isCritical: Bool {
         reorderPoint > 0 && stockLevel < reorderPoint / 2
     }

@@ -14,10 +14,12 @@ public typealias InventoryCoreDataPropertiesSet = NSSet
 
 extension Inventory {
 
+    // Builds a fetch request for this entity.
     @nonobjc public class func fetchRequest() -> NSFetchRequest<Inventory> {
         return NSFetchRequest<Inventory>(entityName: "Inventory")
     }
 
+    // @NSManaged means Core Data supplies the storage. nonisolated lets code off the main actor read it.
     @NSManaged nonisolated public var productId: Int64
     @NSManaged nonisolated public var productName: String?
     @NSManaged nonisolated public var productNumber: String?
@@ -34,9 +36,6 @@ extension Inventory {
 
 extension Inventory : Identifiable {
 
-    /// One product can sit at many locations, so the product ID alone is
-    /// not unique. Product plus location is. This matches the API's
-    /// `/Inventory/{productId}/{locationId}` route and the Core Data
-    /// uniqueness constraint on (productId, locationId).
+    /// Product plus location is unique, matching the API route and the Core Data constraint.
     nonisolated public var id: String { "\(productId)-\(locationId)" }
 }

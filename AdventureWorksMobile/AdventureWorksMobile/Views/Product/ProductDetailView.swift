@@ -23,6 +23,7 @@ struct ProductDetails: View {
                     .font(.default)
                     .padding(5)
                 
+                // Show the photo if it loaded, or a placeholder icon.
                 if let data = photoData, let uiImage = UIImage(data: data) {
                     Image(uiImage: uiImage)
                         .resizable()
@@ -51,7 +52,7 @@ struct ProductDetails: View {
                 }
                 
                 
-                // formatting numbers in text views https://swiftprogramming.com/format-numbers-swiftui/
+                // Two decimal places. See https://swiftprogramming.com/format-numbers-swiftui/
                 Text(product.listPrice, format: .number.precision(.fractionLength(2)))
                     .padding(5)
             }
@@ -61,6 +62,7 @@ struct ProductDetails: View {
     }
 
     private func loadPhoto() async {
+        // loadPhoto only exists on the concrete product repository, so cast to it.
         guard let repo = repository as? TieredCacheRepositoryBase<Product> else { return }
         do {
             photoData = try await repo.loadPhoto(for: product)

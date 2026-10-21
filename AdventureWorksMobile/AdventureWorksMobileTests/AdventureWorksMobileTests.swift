@@ -3,6 +3,7 @@ import Foundation
 import Testing
 @testable import AdventureWorksMobile
 
+// Run tests one at a time, since they share URLProtocolStub.handler.
 @Suite(.serialized)
 @MainActor
 struct AdventureWorksMobileTests {
@@ -11,6 +12,7 @@ struct AdventureWorksMobileTests {
         let store = InMemoryTokenStore()
         let status = AuthStatus(tokenStore: store)
 
+        // #expect records a failure if the condition is false.
         #expect(status.logIn(accessToken: "access", refreshToken: "refresh"))
         #expect(status.isLoggedIn)
         #expect(status.authToken == "access")
@@ -34,8 +36,10 @@ struct AdventureWorksMobileTests {
 
     @Test
     func authServiceEncodesLoginAndDecodesSuccess() async throws {
+        // Fake the server: check the request, then send back a canned response.
         URLProtocolStub.handler = { request in
             #expect(request.httpMethod == "POST")
+            // #require stops the test if the value is nil.
             let body = try #require(request.httpBody)
             let json = try #require(JSONSerialization.jsonObject(with: body) as? [String: String])
             #expect(json["loginId"] == "employee")
@@ -44,6 +48,7 @@ struct AdventureWorksMobileTests {
                 for: request,
                 statusCode: 200,
                 body: Data(
+                    // #"..."# is a raw string, so the quotes inside need no escaping.
                     #"{"success":true,"userName":"employee","accessToken":"access","refreshToken":"refresh"}"#.utf8
                 )
             )
@@ -83,6 +88,7 @@ struct AdventureWorksMobileTests {
         let status = AuthStatus(tokenStore: store)
         #expect(status.logIn(accessToken: "old-access", refreshToken: "old-refresh"))
 
+        // The first call returns 401. The retry should carry the new token.
         var requestCount = 0
         URLProtocolStub.handler = { request in
             requestCount += 1
@@ -170,6 +176,7 @@ struct AdventureWorksMobileTests {
         let status = AuthStatus(tokenStore: store)
         #expect(status.logIn(accessToken: "access", refreshToken: "refresh"))
 
+        // A fresh UserDefaults suite so the cache timestamp starts empty.
         let suiteName = "AdventureWorksMobileTests.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suiteName))
         defer { defaults.removePersistentDomain(forName: suiteName) }
@@ -212,6 +219,7 @@ struct AdventureWorksMobileTests {
         let (_, diskSource) = try await diskRepository.getAll()
         #expect(diskSource == .disk)
 
+        // Move past the 15-minute limit and go offline. The stale disk copy should still load.
         currentDate.addTimeInterval(16 * 60)
         URLProtocolStub.handler = { _ in throw URLError(.notConnectedToInternet) }
         let offlineRepository = TieredCacheRepositoryBase<Product>(
@@ -501,6 +509,7 @@ struct AdventureWorksMobileTests {
         #expect(model.locations.all.flatMap(\.lines).count == 5)
     }
 
+    // A URLSession that sends every request to URLProtocolStub instead of the network.
     private static func stubbedSession() -> URLSession {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [URLProtocolStub.self]
@@ -532,11 +541,13 @@ struct AdventureWorksMobileTests {
     }
 }
 
+// Simple Codable type for testing the base repository.
 private struct SampleItem: Codable, Equatable {
     let id: Int
     let name: String
 }
 
+// Token store backed by a dictionary. failingKey makes one save fail on purpose.
 private final class InMemoryTokenStore: TokenStoring {
     var values: [String: String] = [:]
     private let failingKey: String?
@@ -560,6 +571,7 @@ private final class InMemoryTokenStore: TokenStoring {
     }
 }
 
+// Auth service that returns a fixed refresh result.
 private final class AuthServiceStub: AuthServicing {
     private let refreshResult: Result<LoginResponse, Error>
 
@@ -576,6 +588,7 @@ private final class AuthServiceStub: AuthServicing {
     }
 }
 
+// Intercepts requests and answers them with the handler each test sets.
 private final class URLProtocolStub: URLProtocol {
     static var handler: ((URLRequest) throws -> (HTTPURLResponse, Data))?
 
@@ -601,6 +614,7 @@ private final class URLProtocolStub: URLProtocol {
     override func stopLoading() {}
 }
 
+// Auth service that returns a fixed login result.
 private struct LoginServiceStub: AuthServicing {
     let result: Result<LoginResponse, Error>
 

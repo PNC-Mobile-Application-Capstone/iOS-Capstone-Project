@@ -22,6 +22,7 @@ struct StockStatusIcon: View {
         Image(systemName: status.systemImage)
             .font(.title3)
             .foregroundStyle(color)
+            // Glow when urgent, and pulse when critical unless Reduce Motion is on.
             .shadow(color: status.isUrgent ? color.opacity(0.8) : .clear,
                     radius: status.isUrgent ? 6 : 0)
             .symbolEffect(.pulse, isActive: status.pulses && !reduceMotion)
@@ -30,6 +31,7 @@ struct StockStatusIcon: View {
     }
 }
 
+// Maps each band to a SwiftUI color, so the model doesn't need SwiftUI.
 extension StockLevel.Band {
     var color: Color {
         switch self {
@@ -66,8 +68,7 @@ struct LocationHeader: View {
             }
             Spacer()
             if location.needsReorderCount > 0 {
-                // The icon is orange. The text stays the normal color so
-                // it is easy to read.
+                // Orange icon, normal text color so it stays easy to read.
                 HStack(spacing: 4) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundStyle(.orange)
@@ -77,6 +78,7 @@ struct LocationHeader: View {
                 .font(.caption.weight(.semibold))
             }
         }
+        // Keep normal casing, and have VoiceOver read the header as one item.
         .textCase(nil)
         .accessibilityElement(children: .combine)
     }
@@ -90,6 +92,7 @@ struct InventoryLineRow: View {
     var body: some View {
         let level = line.stockLevel
         let isLarge = dynamicTypeSize.isAccessibilitySize
+        // Stack at large text sizes, side by side otherwise. AnyLayout lets one variable hold either.
         let layout = isLarge
             ? AnyLayout(VStackLayout(alignment: .leading, spacing: 6))
             : AnyLayout(HStackLayout(alignment: .top, spacing: 12))
@@ -122,6 +125,7 @@ struct InventoryLineRow: View {
             }
         }
         .padding(.vertical, 4)
+        // VoiceOver reads one summary instead of each piece.
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(line.accessibilitySummary)
     }

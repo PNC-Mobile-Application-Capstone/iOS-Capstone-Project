@@ -11,6 +11,7 @@ struct DashboardView: View {
     
     @State private var viewModel: ViewModel
     
+    // The repository is passed in so previews can use mock data.
     init(repository: any DashboardRepository) {
         viewModel = ViewModel(repository: repository)
     }
@@ -30,6 +31,7 @@ struct DashboardView: View {
                         HStack {
                             Text(entry.salesDate, format: .dateTime.weekday(.abbreviated))
                             Spacer()
+                            // Dollars with no cents.
                             Text(entry.totalSales, format: .currency(code: "USD").precision(.fractionLength(0)))
                         }
                     }
@@ -89,6 +91,7 @@ struct DashboardView: View {
     
     
     private var statGrid: some View {
+        // Two equal columns of stat blocks.
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
             StatBlock(label: "Weekly Sales", value: viewModel.totalSales.formatted(.currency(code: "USD")))
             StatBlock(label: "Weekly Profit", value: viewModel.totalProfit.formatted(.currency(code: "USD")))
@@ -101,6 +104,7 @@ struct DashboardView: View {
 
 extension DashboardView {
     
+    // @Observable redraws a view only when a property it reads changes.
     @Observable
     class ViewModel {
         
@@ -115,6 +119,7 @@ extension DashboardView {
             self.repository = repository
         }
         
+        // The 7 days ending on the newest sales date, oldest first.
         var lastWeekSales: [WeeklySalesEntry] {
             guard let newest = weeklySales.map(\.salesDate).max(),
                   let cutoff = Calendar.current.date(byAdding: .day, value: -6, to: newest)
@@ -133,20 +138,24 @@ extension DashboardView {
             lastWeekSales.reduce(0) { $0 + $1.totalProfit }
         }
         
+        // Best seller. prefix(1) keeps only the first item.
         var topSellers: [ProductPerformanceEntry] {
             Array(productPerformance.sorted { $0.unitsSold > $1.unitsSold }.prefix(1))
         }
         
+        // Worst seller.
         var underperformers: [ProductPerformanceEntry] {
             Array(productPerformance.sorted { $0.unitsSold < $1.unitsSold }.prefix(1))
         }
         
         func loadData() async {
+            // async let starts all four calls at once. Each await then waits for its result.
             async let sales = repository.getWeeklySales()
             async let performance = repository.getProductPerformance()
             async let stock = repository.getLowStock()
             async let staffShifts = repository.getShifts()
 
+            // A failed call only leaves its own section empty.
             do { weeklySales = try await sales }
             catch { print("weekly-sales failed: \(error)") }
 

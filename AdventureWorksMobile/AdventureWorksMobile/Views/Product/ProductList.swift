@@ -47,6 +47,7 @@ struct ProductList: View {
                     .padding(.vertical, 4)
 
                     if isSearchVisible {
+                        // $ makes a two-way binding, so typing updates searchText.
                         TextField("Search name or product number", text: $viewModel.searchText)
                             .textFieldStyle(.roundedBorder)
                             .textInputAutocapitalization(.never)
@@ -57,6 +58,7 @@ struct ProductList: View {
                         Text("Sort by")
                             .font(.subheadline)
                         Spacer()
+                        // Each option's tag is the value the picker writes to sortOption.
                         Picker("Sort by", selection: $viewModel.sortOption) {
                             ForEach(SortOption.allCases) { option in
                                 Text(option.rawValue).tag(option)
@@ -87,6 +89,7 @@ struct ProductList: View {
                         LoadMoreRow { viewModel.items.loadMore() }
                     }
                 }
+                // Show a "no results" view when a search matches nothing.
                 .overlay {
                     if !viewModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                        viewModel.items.all.isEmpty {
@@ -98,10 +101,10 @@ struct ProductList: View {
                 }
             }
             .background(Color(.systemGroupedBackground))
-            // Title is drawn by ListHeader so it stays put while the list
-            // scrolls. navigationTitle still labels the back button.
+            // ListHeader draws the title so it stays put. navigationTitle still names the back button.
             .navigationTitle("Products")
             .toolbar(.hidden, for: .navigationBar)
+            // Load the data when the screen appears.
             .task { await viewModel.loadData(repository: repository) }
         }
     }
@@ -117,6 +120,7 @@ extension ProductList {
         var id: String { rawValue }
     }
 
+    // @Observable redraws a view only when a property it reads changes.
     @MainActor
     @Observable
     class ViewModel {
@@ -126,6 +130,7 @@ extension ProductList {
         var errorMessage: String = ""
 
         private var allProducts: [Product] = []
+        // didSet reruns the search and sort whenever these change.
         var searchText = "" { didSet { applyCriteria(resetPage: true) } }
         var sortOption: SortOption = .name { didSet { applyCriteria(resetPage: true) } }
 
@@ -147,6 +152,7 @@ extension ProductList {
                 query.isEmpty || (product.name ?? "").localizedStandardContains(query)
                     || (product.productNumber ?? "").localizedStandardContains(query)
             }
+            // Sort by price if chosen, then by name, then by ID so ties never jump.
             let sorted = matches.sorted { left, right in
                 if sortOption != .name, left.listPrice != right.listPrice {
                     return sortOption == .priceAscending

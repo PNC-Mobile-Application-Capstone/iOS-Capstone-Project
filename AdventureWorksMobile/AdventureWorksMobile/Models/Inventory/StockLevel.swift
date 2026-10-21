@@ -8,22 +8,22 @@
 import Foundation
 
 
+// Stock status and color band for one item. nonisolated so any thread can use it.
 nonisolated struct StockLevel: Equatable {
     let quantity: Int64
     let reorderPoint: Int64
     let safetyStockLevel: Int64
 
-    /// Quantity as a fraction of safety stock. 0.24 means 24%.
-    /// Nil when safety stock is 0 or less, so we never divide by zero.
+    /// Quantity as a fraction of safety stock (0.24 means 24%). Nil when safety stock is 0.
     var fractionOfSafetyStock: Double? {
         guard safetyStockLevel > 0 else { return nil }
         return Double(quantity) / Double(safetyStockLevel)
     }
 
-    /// True when the item is at or below its reorder point.
-    /// This is the flag the requirement asks for.
+    /// True when the item is at or below its reorder point, as the requirement asks.
     var needsReorder: Bool { quantity <= reorderPoint }
 
+    // Checked worst to best, so the first match wins.
     var status: Status {
         if quantity <= 0 { return .outOfStock }
         if let fraction = fractionOfSafetyStock, fraction <= 0.25 { return .critical }
@@ -32,15 +32,13 @@ nonisolated struct StockLevel: Equatable {
         return .inStock
     }
 
-    /// Color band from the team sketch. Each band includes its top edge,
-    /// so exactly 75% is yellow, matching "at or below reorder point".
-    /// Color is extra. It never carries meaning alone, because every
-    /// status also has its own icon and text.
+    /// Color band from the team sketch. Each band includes its top edge, so exactly 75% is yellow.
     var band: Band {
         guard let fraction = fractionOfSafetyStock else {
             return quantity <= 0 ? .red : (needsReorder ? .orange : .blue)
         }
         switch fraction {
+        // "...0.25" means up to and including 0.25. "..<1.00" means below 1.00.
         case ...0.25: return .red
         case ...0.50: return .orange
         case ...0.75: return .yellow
@@ -49,13 +47,13 @@ nonisolated struct StockLevel: Equatable {
         }
     }
 
-    /// Worst first. Used to sort rows and locations.
-    /// Status first, then how far below safety stock, lowest first.
+    /// Sorts worst first: by status, then by how far below safety stock.
     static func worstFirst(_ left: StockLevel, _ right: StockLevel) -> Bool {
         if left.status != right.status { return left.status < right.status }
         return left.sortFraction < right.sortFraction
     }
 
+    // With no safety stock set, empty items sort first and the rest sort last.
     private var sortFraction: Double {
         fractionOfSafetyStock ?? (quantity <= 0 ? 0 : .greatestFiniteMagnitude)
     }
@@ -64,6 +62,7 @@ nonisolated struct StockLevel: Equatable {
     nonisolated enum Status: Int, Comparable, CaseIterable {
         case outOfStock, critical, reorder, low, inStock
 
+        // Comparable needs <. Earlier cases have lower raw values, so they count as worse.
         static func < (left: Status, right: Status) -> Bool {
             left.rawValue < right.rawValue
         }
@@ -78,8 +77,7 @@ nonisolated struct StockLevel: Equatable {
             }
         }
 
-        /// Each status has its own shape, so users who cannot tell the
-        /// colors apart can still tell the statuses apart.
+        /// Each status has its own icon, so color is never the only signal.
         var systemImage: String {
             switch self {
             case .outOfStock: "xmark.octagon.fill"

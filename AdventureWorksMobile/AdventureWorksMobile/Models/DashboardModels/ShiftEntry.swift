@@ -17,6 +17,7 @@ struct ShiftEntry: Identifiable, Codable {
 
     var id: Int { employeeId }
 
+    // Join the name parts, skipping any that are nil or empty.
     var fullName: String {
         [firstName, middleName, lastName, suffix]
             .compactMap { $0 }

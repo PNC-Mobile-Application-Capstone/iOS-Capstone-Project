@@ -7,9 +7,7 @@
 
 import SwiftUI
 
-/// Lists every customer order. Each row shows the order number on the
-/// left and the order total on the right. Tapping a row opens the
-/// order details page.
+/// Lists every order with its number, total, customer, and date. Tap a row for details.
 struct CustomerOrderList: View {
 
     @State private var viewModel = ViewModel()
@@ -27,6 +25,7 @@ struct CustomerOrderList: View {
                         Button {
                             isSearchVisible.toggle()
                         } label: {
+                            // Button text is "Hide search", "Search", or "Search: <text>".
                             Label(isSearchVisible ? "Hide search" :
                                     (viewModel.searchText.isEmpty ? "Search" : "Search: \(viewModel.searchText)"),
                                   systemImage: "magnifyingglass")
@@ -40,6 +39,7 @@ struct CustomerOrderList: View {
                     .padding(.vertical, 4)
 
                     if isSearchVisible {
+                        // $ makes a two-way binding, so typing updates searchText.
                         TextField("Search customer or order number", text: $viewModel.searchText)
                             .textFieldStyle(.roundedBorder)
                             .textInputAutocapitalization(.never)
@@ -50,6 +50,7 @@ struct CustomerOrderList: View {
                         Text("Sort by")
                             .font(.subheadline)
                         Spacer()
+                        // Each option's tag is the value the picker writes to sortOption.
                         Picker("Sort by", selection: $viewModel.sortOption) {
                             ForEach(SortOption.allCases) { option in
                                 Text(option.rawValue).tag(option)
@@ -68,6 +69,7 @@ struct CustomerOrderList: View {
                         } label: {
                             VStack {
                                 HStack {
+                                    // verbatim shows the text as-is, so the number has no comma.
                                     Text(verbatim: "Order #\(order.orderNumber)")
                                     Spacer()
                                     Text(order.total, format: .currency(code: "USD"))
@@ -91,6 +93,7 @@ struct CustomerOrderList: View {
                         LoadMoreRow { viewModel.orders.loadMore() }
                     }
                 }
+                // Show a "no results" view when a search matches nothing.
                 .overlay {
                     if !viewModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                        viewModel.orders.all.isEmpty {
@@ -102,23 +105,16 @@ struct CustomerOrderList: View {
                 }
             }
             .background(Color(.systemGroupedBackground))
-            // The title is drawn by ListHeader so it stays put while the list
-            // scrolls. The system nav bar is hidden on this screen only.
-            // navigationTitle is still set so the back button on the
-            // details page reads "Orders".
+            // ListHeader draws the title so it stays put. navigationTitle still names the back button.
             .navigationTitle("Orders")
             .toolbar(.hidden, for: .navigationBar)
+            // Load the data when the screen appears.
             .task { await viewModel.loadData(repository: repository) }
         }
     }
 }
 
-/// One product line inside an order.
-///
-/// This is a plain copy of the values, not the Core Data object.
-/// When the repository refreshes its cache, it deletes the old Core Data
-/// objects. A view still holding one of those would suddenly show empty
-/// values. Copying the values here keeps the details page safe.
+/// A plain copy of one order line, so a cache refresh can't empty a view that holds it.
 struct OrderLine: Identifiable, Hashable {
     let id: Int64
     let productName: String?
@@ -135,12 +131,7 @@ struct OrderLine: Identifiable, Hashable {
     }
 }
 
-/// One order made up of its line items.
-///
-/// The API returns one row per product in an order. Every row repeats
-/// the shared order info (order number, dates, customer). This struct
-/// groups those rows back into a single order and copies the values out
-/// of Core Data (see OrderLine for why).
+/// One order rebuilt from its API rows, with values copied out of Core Data.
 struct OrderGroup: Identifiable, Hashable {
     let orderNumber: Int64
     let orderDate: String?
@@ -153,6 +144,7 @@ struct OrderGroup: Identifiable, Hashable {
     var id: Int64 { orderNumber }
 
     init(orderNumber: Int64, rows: [CustomerOrder]) {
+        // Sort the rows by line ID so the order is stable.
         let sorted = rows.sorted { $0.id < $1.id }
         // Shared order info. Every row has the same values, so read the first one.
         let first = sorted.first
@@ -162,13 +154,14 @@ struct OrderGroup: Identifiable, Hashable {
         self.orderDate = first?.orderDate
         self.shipDate = first?.shipDate
         self.customerId = first?.customerId
+        // Join first and last name, skipping any nil part.
         self.customerName = [first?.firstName, first?.lastName]
             .compactMap { $0 }
             .joined(separator: " ")
         self.lines = sorted.map(OrderLine.init)
     }
 
-    // Summary numbers
+    // Summary numbers. reduce adds up one field across every line.
     var total: Double { lines.reduce(0) { $0 + $1.lineTotal } }
     var totalUnits: Int64 { lines.reduce(0) { $0 + $1.orderQty } }
     var productCount: Int { lines.count }
@@ -184,6 +177,7 @@ extension CustomerOrderList {
         var id: String { rawValue }
     }
 
+    // @Observable redraws a view only when a property it reads changes.
     @MainActor
     @Observable
     class ViewModel {
@@ -193,6 +187,7 @@ extension CustomerOrderList {
         var errorMessage: String = ""
 
         private var allOrders: [OrderGroup] = []
+        // didSet reruns the search and sort whenever these change.
         var searchText = "" { didSet { applyCriteria(resetPage: true) } }
         var sortOption: SortOption = .number { didSet { applyCriteria(resetPage: true) } }
 
@@ -208,6 +203,7 @@ extension CustomerOrderList {
             applyCriteria(resetPage: false)
         }
 
+        // Filter by search text, sort, then hand the result to the pager.
         private func applyCriteria(resetPage: Bool) {
             let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
             let matches = allOrders.filter { order in
@@ -216,6 +212,7 @@ extension CustomerOrderList {
             }
             let sorted = matches.sorted { left, right in
                 if sortOption != .number {
+                    // Compare the dates. Orders with no date go last.
                     switch (left.sortDate, right.sortDate) {
                     case let (leftDate?, rightDate?) where leftDate != rightDate:
                         return sortOption == .newest ? leftDate > rightDate : leftDate < rightDate

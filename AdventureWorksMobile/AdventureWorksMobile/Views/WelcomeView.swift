@@ -7,6 +7,7 @@
 
 import SwiftUI
 
+// Title view. Only its preview uses it right now.
 struct Welcome: View {
     
     

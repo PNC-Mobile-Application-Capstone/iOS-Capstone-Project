@@ -7,19 +7,14 @@
 
 import SwiftUI
 
-/// Details for one order.
-///
-/// Top: shared order info (dates, customer).
-/// Middle: one row per product. Tapping a row opens that product's details.
-/// Bottom: order summary (product count, units, total).
+/// One order: shared info on top, a row per product, then a summary.
 struct CustomerOrderDetails: View {
 
     @Environment(\.productRepository) private var productRepository
 
     let order: OrderGroup
 
-    /// Products keyed by name. Order lines only carry the product name,
-    /// so we match on name to find the full Product for the details page.
+    /// Products keyed by name, since order lines only carry the product name.
     @State private var productsByName: [String: Product] = [:]
 
     var body: some View {
@@ -57,6 +52,7 @@ struct CustomerOrderDetails: View {
                 }
             }
         }
+        // Wrap in String so the order number shows without a comma.
         .navigationTitle(String("Order #\(order.orderNumber)"))
         .task { await loadProducts() }
     }
@@ -65,6 +61,7 @@ struct CustomerOrderDetails: View {
         guard let productRepository else { return }
         do {
             let (products, _) = try await productRepository.getAll()
+            // Build a name-to-product lookup. Skip products with no name and keep the first duplicate.
             productsByName = Dictionary(
                 products.compactMap { p in p.name.map { ($0, p) } },
                 uniquingKeysWith: { first, _ in first }

@@ -7,12 +7,7 @@
 
 import SwiftUI
 
-/// Fixed header for a list screen.
-///
-/// It sits above the List, so dragging the list does not move it.
-/// Screens that use it hide the system nav bar with
-/// `.toolbar(.hidden, for: .navigationBar)` and still set
-/// `.navigationTitle` so the back button on the next page has a label.
+/// Fixed title above a List. Screens hide the nav bar but keep navigationTitle for the back button.
 struct ListHeader: View {
     let title: String
     var errorMessage: String = ""

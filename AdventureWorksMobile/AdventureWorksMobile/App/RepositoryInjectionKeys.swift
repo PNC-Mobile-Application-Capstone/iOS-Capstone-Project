@@ -7,15 +7,9 @@
 
 import SwiftUI
 
-// SwiftUI's environment doesn't let you inject arbitrary values by type
-// alone (the way @EnvironmentObject does for ObservableObjects); each
-// custom value needs a key type conforming to EnvironmentKey. This file
-// defines one key per repository. EnvExt.swift then uses these keys to
-// expose \.productRepository as if it were
-// built-in environment values like \.colorScheme.
+// One EnvironmentKey per repository. EnvironmentExtensions.swift turns these into \.name properties.
 
-/// Environment key for the product repository. A nil default keeps previews
-/// from contacting the live API when no repository is explicitly injected.
+/// Product repository key. Nil by default so previews never call the live API.
 struct ProductRepositoryKey: EnvironmentKey {
     static let defaultValue: (any TieredCacheRepositoryProtocol<Product>)? = nil
 }

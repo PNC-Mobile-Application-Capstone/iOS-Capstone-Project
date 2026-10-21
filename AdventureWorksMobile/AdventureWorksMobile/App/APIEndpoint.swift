@@ -7,18 +7,10 @@
 
 import Foundation
 
-/// Every AdventureWorks API route the app calls, in one place.
-///
-/// Repositories and services ask this enum for a URL instead of
-/// building strings by hand. If the server address or a path ever
-/// changes, this is the only file that needs to change.
-///
-/// Paths match the casing shown in Swagger
-/// (https://api.bootcampcentral.com/swagger/index.html).
+/// Every API route the app calls, so URLs are built in one place. Paths match Swagger.
 enum APIEndpoint {
 
-    /// Root of every route. Change this to point the app at a
-    /// different server.
+    /// Root of every route.
     static let baseURL = "https://api.bootcampcentral.com/api"
 
     // Auth
@@ -86,6 +78,7 @@ enum APIEndpoint {
 
         case .employees:
             "/Employee"
+        // "let id" pulls the value stored in the case so it can go in the path.
         case .employee(let id):
             "/Employee/\(id)"
         case .employeePersonalInfo(let id):
@@ -115,14 +108,12 @@ enum APIEndpoint {
         }
     }
 
-    /// The full URL as a string. Use this with the repository methods,
-    /// which take a String (fetchAll, fetchOne, put, and so on).
+    /// Full URL as a String, used by the repository methods.
     var urlString: String {
         Self.baseURL + path
     }
 
-    /// The full URL as a URL. Use this when building a URLRequest
-    /// directly, like AuthService does.
+    /// Full URL as a URL, used when building a URLRequest directly.
     var url: URL? {
         URL(string: urlString)
     }
