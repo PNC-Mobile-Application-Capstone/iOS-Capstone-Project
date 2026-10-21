@@ -93,6 +93,7 @@ disk data when the network is unavailable.
 ## Contributing
 
 - Branch from `main` using short-lived feature branches
+- Merge into `dev` first to test current build along with other contributor's code
 - Open a pull request for review before merging; no direct pushes to `main`
 - Keep commits small and meaningful
 - Follow the team's agreed Definition of Ready / Definition of Done
