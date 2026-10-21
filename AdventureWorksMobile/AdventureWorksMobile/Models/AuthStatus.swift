@@ -8,12 +8,7 @@
 import SwiftUI
 internal import Combine
 
-/// Observable app-wide auth state. This is what views check to decide
-/// whether to show LoginView or the logged-in ContentView, and it's the
-/// single place tokens get written to (or cleared from) the Keychain.
-///
-/// `internal import Combine` above pulls in the Combine framework, which
-/// is where `ObservableObject` and `@Published` come from.
+/// App-wide login state. Views read it, and it is the only place tokens are saved or cleared.
 @MainActor
 final class AuthStatus: ObservableObject {
 
@@ -22,33 +17,25 @@ final class AuthStatus: ObservableObject {
     private let refreshKey = "userRefreshToken"
     private let tokenStore: any TokenStoring
 
-    // @Published is a property wrapper (from Combine) that turns simple
-    // property assignment into a broadcast: every time isLoggedIn changes,
-    // ObservableObject automatically fires objectWillChange, and any
-    // SwiftUI view reading this value (via @EnvironmentObject/@StateObject)
-    // re-renders. `private(set)` means only this class can change the
-    // value directly; outside code has to go through logIn or logout.
+    // @Published redraws views when the value changes. private(set) means only this class can set it.
     @Published private(set) var isLoggedIn = false
     @Published private(set) var sessionMessage: String?
 
 
-    /// On app launch, check the Keychain for both tokens. If they're both
-    /// present the user is treated as still logged in (no fresh login
-    /// needed) until/unless a request comes back 401 with no valid refresh
-    /// token.
+    /// On launch, the user counts as logged in if both tokens are in the Keychain.
     init(tokenStore: (any TokenStoring)? = nil) {
+        // Tests pass their own store. The app uses the Keychain.
         let tokenStore = tokenStore ?? SecureTokenManager.shared
         self.tokenStore = tokenStore
         let auth = tokenStore.getToken(key: authKey)
         let refresh = tokenStore.getToken(key: refreshKey)
 
+        // True only when both tokens exist and are not empty.
         self.isLoggedIn = !(auth?.isEmpty ?? true) && !(refresh?.isEmpty ?? true)
     }
 
 
-    // Computed properties that read straight from the Keychain each time,
-    // rather than caching the token value here in memory. This keeps
-    // AuthStatus and SecureTokenManager from drifting out of sync.
+    // Read tokens from the Keychain each time so they never drift out of sync.
     var authToken: String? {
         tokenStore.getToken(key: authKey)
     }
@@ -66,6 +53,7 @@ final class AuthStatus: ObservableObject {
             return false
         }
 
+        // If either save fails, clear both so no half-saved login is left.
         guard tokenStore.saveToken(accessToken, key: authKey),
               tokenStore.saveToken(refreshToken, key: refreshKey) else {
             tokenStore.deleteToken(key: authKey)
@@ -79,6 +67,7 @@ final class AuthStatus: ObservableObject {
         return true
     }
 
+    // Clears both tokens. sessionExpired shows a message on the login screen.
     func logout(sessionExpired: Bool = false) {
         tokenStore.deleteToken(key: authKey)
         tokenStore.deleteToken(key: refreshKey)

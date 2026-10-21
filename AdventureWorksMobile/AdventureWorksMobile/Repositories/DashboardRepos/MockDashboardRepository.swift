@@ -7,6 +7,7 @@
 
 import Foundation
 
+// Fake dashboard data for previews.
 class MockDashboardRepository: DashboardRepository {
     
     func getWeeklySales() async throws -> [WeeklySalesEntry] {
@@ -16,6 +17,7 @@ class MockDashboardRepository: DashboardRepository {
             (18_400, 5_520), (22_100, 6_630), (15_800, 4_740),
             (29_600, 8_880), (34_200, 10_260), (12_300, 3_690), (9_100, 2_730)
         ]
+        // Give each amount a date, counting back from today.
         return amounts.enumerated().map { offset, pair in
             let date = calendar.date(byAdding: .day, value: -(6 - offset), to: today)!
             return WeeklySalesEntry(salesDate: date, totalSales: pair.sales, totalProfit: pair.profit)

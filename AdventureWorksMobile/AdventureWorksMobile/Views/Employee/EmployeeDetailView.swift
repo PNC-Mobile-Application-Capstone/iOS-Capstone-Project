@@ -14,13 +14,11 @@ struct EmployeeDetails: View {
 
     var employee: EmployeeRow
     
-    // Photo bytes for this page. The repository handles caching and Core Data.
-//    @State private var photoData: Data?
 
     var body: some View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 8) {
-                Text("\(employee.firstName) \(employee.lastName)")
+                Text(employee.displayName)
                     .font(.default)
                     .padding(5)
 
@@ -35,7 +33,8 @@ struct EmployeeDetails: View {
                     .padding(5)
                 
                 
-                if employee.shift != nil  { Text(employee.shift!).padding(5) }
+                // Only show the shift when the API sent one.
+                if let shift = employee.shift { Text(shift).padding(5) }
                 
             }
         }

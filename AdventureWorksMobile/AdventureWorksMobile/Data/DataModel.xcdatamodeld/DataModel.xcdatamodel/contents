@@ -33,10 +33,10 @@
         </uniquenessConstraints>
     </entity>
     <entity name="Inventory" representedClassName="Inventory" syncable="YES">
-        <attribute name="bin" optional="YES" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
-        <attribute name="id" optional="YES" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="bin" optional="YES" attributeType="Integer 64" usesScalarValueType="NO"/>
         <attribute name="locationId" optional="YES" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="locationName" optional="YES" attributeType="String"/>
+        <attribute name="productId" optional="YES" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="productName" optional="YES" attributeType="String"/>
         <attribute name="productNumber" optional="YES" attributeType="String"/>
         <attribute name="quantity" optional="YES" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
@@ -45,7 +45,8 @@
         <attribute name="shelf" optional="YES" attributeType="String"/>
         <uniquenessConstraints>
             <uniquenessConstraint>
-                <constraint value="id"/>
+                <constraint value="productId"/>
+                <constraint value="locationId"/>
             </uniquenessConstraint>
         </uniquenessConstraints>
     </entity>

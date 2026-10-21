@@ -7,6 +7,7 @@
 
 import SwiftUI
 
+// One labeled number on the dashboard grid.
 struct StatBlock: View {
 
     let label: String

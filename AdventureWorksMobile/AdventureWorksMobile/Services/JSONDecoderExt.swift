@@ -9,12 +9,15 @@ import Foundation
 
 extension JSONDecoder {
 
+    // Parses API date strings. Tries ISO 8601 with fractional seconds first, then a plain local date and time.
     func useStringDecoderForDate() {
 
         self.dateDecodingStrategy = .custom { decoder in
 
+            // The date is a single JSON value, so read it as one string.
             let container = try decoder.singleValueContainer()
 
+            // A null date becomes distantPast instead of failing.
             guard let value = try container.decode(String?.self) else {
                 return Date.distantPast
             }

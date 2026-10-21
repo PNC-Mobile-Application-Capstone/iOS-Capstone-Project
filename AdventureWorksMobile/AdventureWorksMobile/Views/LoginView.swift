@@ -8,12 +8,7 @@ import SwiftUI
 
 struct LoginView: View {
 
-    // Note: this is @State, not @StateObject, because ViewModel below is
-    // an @Observable class (the newer Observation framework), not an
-    // ObservableObject. @State works for both value types and @Observable
-    // reference types; SwiftUI only re-renders when a property the body
-    // actually reads changes, rather than on every change to the object
-    // (which is how @Published/ObservableObject behaves).
+    // @State, not @StateObject, because ViewModel uses @Observable instead of ObservableObject.
     @State private var viewModel = ViewModel()
     @EnvironmentObject var authStatus: AuthStatus
 
@@ -25,6 +20,7 @@ struct LoginView: View {
 
                 VStack(alignment: .leading, spacing: 24) {
 
+                    // Shown after a session expires.
                     if let message = authStatus.sessionMessage {
                         Label(message, systemImage: "info.circle")
                             .font(.subheadline)
@@ -32,7 +28,9 @@ struct LoginView: View {
                             .accessibilityIdentifier("sessionMessage")
                     }
 
+                    // field() wraps each input with a label and shared styling.
                     field("Username") {
+                        // $ makes a two-way binding to the view model.
                         TextField("Enter your username", text: $viewModel.credentials.username)
                             .textContentType(.username)
                             .accessibilityIdentifier("usernameField")
@@ -69,8 +67,10 @@ struct LoginView: View {
                 .padding(24)
                 .background(Color(uiColor: .secondarySystemGroupedBackground),
                             in: RoundedRectangle(cornerRadius: 12))
+                // Lock the form while signing in.
                 .disabled(viewModel.isBusy)
             }
+            // Cap the width on iPad, then center it.
             .frame(maxWidth: 480)
             .frame(maxWidth: .infinity)
             .padding([.horizontal, .bottom], 24)
@@ -96,6 +96,7 @@ struct LoginView: View {
         .padding(.top, 32)
     }
 
+    // Generic helper. @ViewBuilder lets the caller pass any view in the closure.
     private func field<Content: View>(
         _ title: String,
         @ViewBuilder content: () -> Content
@@ -113,6 +114,7 @@ struct LoginView: View {
     }
 
     private func signIn() {
+        // Task runs the async login from a button tap. Tokens are saved only on success.
         Task {
             if let response = await viewModel.login() {
                 guard response.success,
@@ -129,19 +131,14 @@ struct LoginView: View {
 
 extension LoginView {
 
-    // @Observable is a macro (from the Observation framework) that
-    // expands at compile time to make every stored property trackable by
-    // SwiftUI, without needing @Published on each one and without
-    // conforming to ObservableObject. SwiftUI only re-renders views for
-    // the specific properties they actually read in `body`, which is more
-    // efficient than ObservableObject's "any change re-renders every
-    // observer" behavior.
+    // @Observable tracks each property, so views redraw only when a property they read changes.
     @MainActor
     @Observable
     class ViewModel {
 
         private let authService: any AuthServicing
 
+        // Tests pass a stub. The app uses the shared AuthService.
         init(authService: (any AuthServicing)? = nil) {
             self.authService = authService ?? AuthService.shared
         }
@@ -155,14 +152,11 @@ extension LoginView {
 
         var errorMessage: String = ""
 
-        /// Calls AuthService.login and reports back a LoginResponse (or
-        /// nil, with errorMessage set, if the call throws). Does not
-        /// itself touch AuthStatus/the Keychain; the caller (LoginView's
-        /// button action) is responsible for calling
-        /// authStatus.logIn with the result.
+        /// Calls AuthService.login. Returns nil and sets errorMessage on failure. The caller saves the tokens.
         func login() async -> LoginResponse? {
             errorMessage = ""
             isBusy = true
+            // defer turns the spinner off however the function exits.
             defer { isBusy = false }
 
             do {
