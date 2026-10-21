@@ -37,10 +37,31 @@ struct PersistenceController {
         // failure here (corrupt store, disk full, etc.) is treated as
         // unrecoverable, since the rest of the app assumes Core Data is
         // already available by the time it starts making fetches.
+        var loadError: NSError?
         container.loadPersistentStores { (storeDescription, error) in
-            if let error = error as NSError? {
-                fatalError("Unresolved error \(error), \(error.userInfo)")
+            loadError = error as NSError?
+        }
+
+        // The store is only a cache of API data. If the model changed
+        // (for example, the Inventory key moved from productId to
+        // productId + locationId), the old file will not open. Rather than
+        // crash, delete it and start fresh. The next load refills it from
+        // the API.
+        if let error = loadError, !inMemory,
+           let storeURL = container.persistentStoreDescriptions.first?.url {
+            print("Core Data store failed to load (\(error.code)). Rebuilding the cache.")
+            do {
+                try container.persistentStoreCoordinator.destroyPersistentStore(at: storeURL, type: .sqlite)
+            } catch {
+                fatalError("Could not remove old store: \(error)")
             }
+            container.loadPersistentStores { (storeDescription, error) in
+                if let error = error as NSError? {
+                    fatalError("Unresolved error \(error), \(error.userInfo)")
+                }
+            }
+        } else if let error = loadError {
+            fatalError("Unresolved error \(error), \(error.userInfo)")
         }
         container.viewContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
         container.viewContext.automaticallyMergesChangesFromParent = true
