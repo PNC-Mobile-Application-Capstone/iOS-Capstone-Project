@@ -11,7 +11,7 @@ Give AdventureWorks employees and managers timely access to operational informat
 | Focus role                   | Responsibility                                                        | Owner                         |
 | ---------------------------- | --------------------------------------------------------------------- | ----------------------------- |
 | Scrum Facilitator            | Planning, stand-ups, backlog refinement, review, retrospective        | Tyler Swindell                |
-| Technical Lead               | Architecture, integration choices, PR quality, technical risk         | Nate Bergmman                 |
+| Technical Lead               | Architecture, integration choices, PR quality, technical risk         | Nate Bergman                  |
 | Quality & Accessibility Lead | Test strategy, acceptance checks, accessibility review, defect triage | Jonah Kriess                  |
 | Product & UX Liaison         | Business value, priorities, flow coordination, stakeholder feedback   | Aza Mohanty                   |
 
