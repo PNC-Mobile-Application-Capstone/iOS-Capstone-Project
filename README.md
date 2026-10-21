@@ -8,24 +8,24 @@ Give AdventureWorks employees and managers timely access to operational informat
 
 ## Team
 
-| Focus role                   | Responsibility                                                        | Owner (rotates at least once) |
+| Focus role                   | Responsibility                                                        | Owner                         |
 | ---------------------------- | --------------------------------------------------------------------- | ----------------------------- |
-| Scrum Facilitator            | Planning, stand-ups, backlog refinement, review, retrospective        | TBD                           |
-| Technical Lead               | Architecture, integration choices, PR quality, technical risk         | TBD                           |
-| Quality & Accessibility Lead | Test strategy, acceptance checks, accessibility review, defect triage | TBD                           |
-| Product & UX Liaison         | Business value, priorities, flow coordination, stakeholder feedback   | TBD                           |
+| Scrum Facilitator            | Planning, stand-ups, backlog refinement, review, retrospective        | Tyler Swindell                |
+| Technical Lead               | Architecture, integration choices, PR quality, technical risk         | Nate Bergman                  |
+| Quality & Accessibility Lead | Test strategy, acceptance checks, accessibility review, defect triage | Jonah Kriess                  |
+| Product & UX Liaison         | Business value, priorities, flow coordination, stakeholder feedback   | Aza Mohanty                   |
 
 All members are developers and contribute code; no one is the sole owner of an application area.
 
 ## Tech Stack
 
-- Swift, SwiftUI (primary UI)
-- Swift concurrency (async/await) for networking
+- Swift, SwiftUI
 - MVVM with a reusable API client in a services/repository layer
 - Codable models for API responses
 - XCTest (unit tests + at least one UI test of a critical path)
 - Swift Package Manager for approved third-party dependencies
-- Git / GitHub, feature branches, protected `main`, reviewed pull requests
+- Git / GitHub, feature branches, protected `main`, reviewed pull requests,
+- `dev` receives updates for staging then merged into `main` after testing
 
 ## API
 

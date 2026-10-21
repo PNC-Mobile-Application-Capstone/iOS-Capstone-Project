@@ -14,8 +14,7 @@ struct AccountView: View {
         NavigationStack {
             List {
                 Button("Log out") {
-                    // Clears both Keychain tokens and sets isLoggedIn to false,
-                    // which sends the app back to LoginView.
+                    // Clears both tokens, which sends the app back to LoginView.
                     authStatus.logout()
                 }
             }

@@ -7,6 +7,7 @@
 import Foundation
 
 
+// Errors the network layer can throw.
 enum NetworkError: Error {
     case invalidURL
     case noConnection
@@ -17,6 +18,7 @@ enum NetworkError: Error {
     case missingAuthToken
 }
 
+// LocalizedError gives each case a message the UI shows through localizedDescription.
 extension NetworkError: LocalizedError {
     var errorDescription: String? {
         switch self {

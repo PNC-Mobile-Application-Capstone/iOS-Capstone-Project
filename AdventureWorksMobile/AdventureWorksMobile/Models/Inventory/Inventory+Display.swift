@@ -7,6 +7,7 @@
 
 import Foundation
 
+// Display text for an Inventory row, with placeholders for missing values.
 extension Inventory {
 
     var stockLevel: StockLevel {

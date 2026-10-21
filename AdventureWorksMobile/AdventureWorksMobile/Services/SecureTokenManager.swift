@@ -8,6 +8,7 @@
 import Foundation
 import Security
 
+// Token storage. The app uses the Keychain and tests use an in-memory version.
 protocol TokenStoring {
     @discardableResult
     func saveToken(_ token: String, key: String) -> Bool
@@ -15,35 +16,26 @@ protocol TokenStoring {
     func deleteToken(key: String)
 }
 
-/// A thin wrapper around the iOS/macOS Keychain (the `Security` framework's
-/// C APIs) for saving, reading, and deleting auth tokens.
-///
-/// Tokens should never be stored in UserDefaults or a plain file since
-/// those aren't encrypted at rest. The Keychain is, so this is where the
-/// access token and refresh token both live between app launches.
+/// Saves, reads, and deletes tokens in the Keychain, which is encrypted, unlike UserDefaults.
 final class SecureTokenManager: TokenStoring {
     // Singleton, same reasoning as AuthService: one manager, shared everywhere.
     static let shared = SecureTokenManager()
 
+    // private init means everyone has to use .shared.
     private init() {}
 
-    // "service" groups every item this app saves under one Keychain bucket.
-    // The "key" parameter on each method below (e.g. "userAccessToken",
-    // "userRefreshToken") is what distinguishes individual items within
-    // that bucket.
+    // Groups this app's Keychain items. Each key names one item inside it.
     private let service = "com.adventure-works-mobile-app.auth"
 
-    /// Saves a token string into the Keychain under `key`.
-    /// Returns true if the save succeeded.
+    /// Saves a token under key. Returns true on success.
     func saveToken(_ token: String, key: String) -> Bool {
         // Keychain APIs work with raw Data, not String, so convert first.
         guard let data = token.data(using: .utf8) else { return false }
 
-        // Keychain calls are dictionary-based ("query") rather than having
-        // dedicated method signatures. This query describes what we're
-        // saving and where.
+        // Keychain calls take a dictionary that describes the item.
         let lookupQuery: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,   // generic key/value item (vs. a certificate, internet password, etc.)
+            // Generic password is the plain key/value item type.
+            kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: key
         ]
@@ -53,15 +45,11 @@ final class SecureTokenManager: TokenStoring {
             kSecAttrService as String: service,
             kSecAttrAccount as String: key,
             kSecValueData as String: data,
-            // Item is unlocked (readable) once the user has unlocked the
-            // device for the first time after boot, and stays that way
-            // even if the device is locked again. Good default for tokens
-            // that background refresh logic may need to read.
+            // Readable after the first unlock since boot, on this device only.
             kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
         ]
 
-        // delete any existing item (for this key) before saving,
-        // to prevent duplicate value conflicts
+        // Delete any old item first so the add does not fail as a duplicate.
         SecItemDelete(lookupQuery as CFDictionary)
 
         let status = SecItemAdd(query as CFDictionary, nil)
@@ -69,18 +57,19 @@ final class SecureTokenManager: TokenStoring {
         return status == errSecSuccess
     }
 
-    /// Reads back the token string stored under `key`, or nil if nothing
-    /// is saved (or the read failed).
+    /// Returns the token saved under key, or nil.
     func getToken(key: String) -> String? {
 
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: key,
-            kSecReturnData as String: true,        // ask the Keychain to hand back the actual data, not just confirm it exists
+            // Return the stored data, not just whether it exists.
+            kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne
         ]
 
+        // SecItemCopyMatching writes the result into dataRef through the & pointer.
         var dataRef: AnyObject?
         let status = SecItemCopyMatching(query as CFDictionary, &dataRef)
 
@@ -91,8 +80,7 @@ final class SecureTokenManager: TokenStoring {
         return nil
     }
 
-    /// Removes the token stored under `key`, if any. Used on logout, or
-    /// when a caller needs to clear a token that's no longer valid.
+    /// Deletes the token saved under key, if there is one.
     func deleteToken(key: String) {
 
         let query: [String: Any] = [

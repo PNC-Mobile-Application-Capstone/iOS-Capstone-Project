@@ -49,6 +49,7 @@ struct InventoryList: View {
                     .padding(.vertical, 4)
 
                     if isSearchVisible {
+                        // $ makes a two-way binding, so typing updates searchText.
                         TextField("Search product, number, or location", text: $viewModel.searchText)
                             .textFieldStyle(.roundedBorder)
                             .textInputAutocapitalization(.never)
@@ -60,6 +61,7 @@ struct InventoryList: View {
 
                 List {
                     ForEach(viewModel.locations.shown) { location in
+                        // A collapsible section per location, with an expandable row per product.
                         Section(isExpanded: expansionBinding(for: location.id)) {
                             ForEach(location.lines) { line in
                                 DisclosureGroup {
@@ -78,7 +80,9 @@ struct InventoryList: View {
                         LoadMoreRow { viewModel.locations.loadMore() }
                     }
                 }
+                // Sidebar style gives each section its collapse arrow.
                 .listStyle(.sidebar)
+                // Show a "no results" view when a search matches nothing.
                 .overlay {
                     if viewModel.isSearching, viewModel.locations.all.isEmpty {
                         ContentUnavailableView.search(text: viewModel.searchText)
@@ -89,18 +93,17 @@ struct InventoryList: View {
                 }
             }
             .background(Color(.systemGroupedBackground))
-            // Title is drawn by ListHeader so it stays put while the list
-            // scrolls. navigationTitle still labels the back button.
+            // ListHeader draws the title so it stays put. navigationTitle still names the back button.
             .navigationTitle("Inventory")
             .toolbar(.hidden, for: .navigationBar)
+            // Load the data when the screen appears.
             .task { await viewModel.loadData(repository: repository) }
         }
     }
 
-    /// Open or closed state for one location. While the user is searching,
-    /// every location stays open so a match is never hidden inside a
-    /// closed section.
+    /// Open or closed state for a location. Always open while searching so matches stay visible.
     private func expansionBinding(for locationId: Int64) -> Binding<Bool> {
+        // A custom Binding with its own get and set, backed by expandedLocations.
         Binding(
             get: { viewModel.isSearching || expandedLocations.contains(locationId) },
             set: { isExpanded in
@@ -131,6 +134,7 @@ struct InventoryLine: Identifiable, Hashable {
     let safetyStockLevel: Int64
     let accessibilitySummary: String
 
+    // Copy the values out of Core Data so a cache refresh can't empty the row.
     init(_ item: Inventory) {
         id = item.id
         productId = item.productId
@@ -163,6 +167,7 @@ struct InventoryLine: Identifiable, Hashable {
 
     /// Worst stock first. Ties go to name, then ID, so the order never jumps.
     static func worstFirst(_ left: InventoryLine, _ right: InventoryLine) -> Bool {
+        // Check both directions to tell "worse" apart from "tied".
         if StockLevel.worstFirst(left.stockLevel, right.stockLevel) { return true }
         if StockLevel.worstFirst(right.stockLevel, left.stockLevel) { return false }
         let comparison = left.name.localizedStandardCompare(right.name)
@@ -191,6 +196,7 @@ struct LocationGroup: Identifiable, Hashable {
 
     /// The location whose worst item is in the worst shape goes first.
     static func worstFirst(_ left: LocationGroup, _ right: LocationGroup) -> Bool {
+        // Compare each location's worst line. A location with no lines goes last.
         switch (left.lines.first, right.lines.first) {
         case let (leftLine?, rightLine?):
             if InventoryLine.worstFirst(leftLine, rightLine) { return true }
@@ -206,6 +212,7 @@ struct LocationGroup: Identifiable, Hashable {
 
 extension InventoryList {
 
+    // @Observable redraws a view only when a property it reads changes.
     @MainActor
     @Observable
     class ViewModel {
@@ -215,6 +222,7 @@ extension InventoryList {
         var errorMessage: String = ""
 
         private var allLines: [InventoryLine] = []
+        // didSet reruns the search whenever the text changes.
         var searchText = "" { didSet { applyCriteria(resetPage: true) } }
 
         var hasActiveCriteria: Bool { !searchText.isEmpty }
@@ -255,7 +263,8 @@ extension InventoryList {
             do {
                 let (rows, source) = try await repository.getAll(forceRefresh: forceRefresh)
                 self.source = source
-                setLines(rows.map(InventoryLine.init))   // copy out of Core Data
+                // Copy out of Core Data.
+                setLines(rows.map(InventoryLine.init))
                 print("Loaded \(rows.count) inventory rows in \(locations.all.count) locations from \(source)")
             } catch {
                 errorMessage = error.localizedDescription

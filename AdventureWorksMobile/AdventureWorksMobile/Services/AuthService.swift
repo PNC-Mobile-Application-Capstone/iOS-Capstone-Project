@@ -7,28 +7,20 @@
 
 import Foundation
 
+// Lets tests swap in a fake auth service.
 protocol AuthServicing {
     func login(credentials: LoginModel) async throws -> LoginResponse
     func refreshToken(authToken: String, refreshToken: String) async throws -> LoginResponse
 }
 
+// JSON body for the refresh call.
 private struct RefreshTokenRequest: Encodable {
     let refreshToken: String
 }
 
-/// Handles the two network calls that make up the authentication flow:
-/// logging in with a username/password, and exchanging a refresh token
-/// for a fresh access token when the current one expires.
-///
-/// `AuthService` itself is stateless. It does not hold on to any tokens;
-/// it just knows how to talk to the login endpoints and hand back a
-/// decoded `LoginResponse`. Storing/retrieving the tokens is the job of
-/// `SecureTokenManager`, and tracking whether the user is logged in is
-/// the job of `AuthStatus`.
+/// Makes the login and refresh calls. It holds no tokens. AuthStatus and SecureTokenManager do that.
 final class AuthService: AuthServicing {
-    // Singleton pattern: one shared instance for the whole app instead of
-    // creating a new AuthService every time a login/refresh call is made.
-    // Tests can inject a URLSession while production uses the shared instance.
+    // One shared instance for the app. Tests create their own with a stub URLSession.
     static let shared = AuthService()
     private let session: URLSession
 
@@ -36,9 +28,7 @@ final class AuthService: AuthServicing {
         self.session = session
     }
 
-    /// Calls POST /api/Login with the user's credentials and returns the
-    /// decoded response (which includes the access token and refresh
-    /// token on success).
+    /// POST /api/Login. Returns the tokens on success.
     func login(credentials: LoginModel) async throws -> LoginResponse {
 
         guard let url = APIEndpoint.login.url else {
@@ -49,8 +39,7 @@ final class AuthService: AuthServicing {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        // LoginModel conforms to Codable, so JSONEncoder can turn it
-        // straight into the JSON body of the request.
+        // LoginModel is Codable, so JSONEncoder turns it into the request body.
         let encoder = JSONEncoder()
         do {
             request.httpBody = try encoder.encode(credentials)
@@ -74,11 +63,9 @@ final class AuthService: AuthServicing {
 
         do {
             let decoder = JSONDecoder()
-            // API returns snake_case keys (e.g. access_token); this maps
-            // them to the camelCase properties on LoginResponse automatically.
+            // Map snake_case JSON keys to camelCase properties.
             decoder.keyDecodingStrategy = .convertFromSnakeCase
-            // Custom date strategy (defined in JSONDecoderExt.swift) so the
-            // ISO 8601 date strings the API sends decode into real Date values.
+            // Decode ISO 8601 date strings (see JSONDecoderExt.swift).
             decoder.useStringDecoderForDate()
 
             return try decoder.decode(LoginResponse.self, from: data)
@@ -90,12 +77,7 @@ final class AuthService: AuthServicing {
     }
 
 
-    /// Calls POST /api/Login/refresh to trade an (expired) access token and
-    /// a still-valid refresh token for a brand new pair of tokens.
-    ///
-    /// This is what RemoteRepositoryBase calls automatically when a request
-    /// comes back 401, so the user doesn't have to log in again every time
-    /// their access token expires.
+    /// POST /api/Login/refresh. Trades the old tokens for a new pair after a 401.
     func refreshToken(authToken: String, refreshToken: String) async throws -> LoginResponse {
 
         guard let url = APIEndpoint.refreshToken.url else {
@@ -105,9 +87,7 @@ final class AuthService: AuthServicing {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        // Even though this token may be expired, it still gets sent in the
-        // Authorization header; the refresh endpoint uses it (together with
-        // the refresh token below) to identify which session to renew.
+        // The expired access token still goes in the header so the server knows which session to renew.
         request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
 
         do {
@@ -124,8 +104,7 @@ final class AuthService: AuthServicing {
 
         guard (200...299).contains(http.statusCode) else {
             if http.statusCode == 401 {
-                // Refresh token itself is invalid/expired; caller needs to
-                // send the user back to the login screen.
+                // The refresh token is bad too, so the user must sign in again.
                 throw NetworkError.unauthorized
             }
             throw NetworkError.badResponse(statusCode: http.statusCode)
