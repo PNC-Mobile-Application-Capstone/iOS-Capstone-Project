@@ -391,6 +391,116 @@ struct AdventureWorksMobileTests {
         #expect(model.orders.all.map(\.id) == Array(1...30).map(Int64.init))
     }
 
+    @Test
+    func inventoryDecodingKeysByProductAndLocationAndAcceptsNulls() throws {
+        let context = PersistenceController(inMemory: true).container.viewContext
+        let decoder = JSONDecoder()
+        decoder.userInfo[.managedObjectContext] = context
+        let data = Data(
+            #"[{"productId":1,"locationId":1,"productName":"Adjustable Race","productNumber":"AR-5381","locationName":"Tool Crib","shelf":"A","bin":1,"quantity":408,"reorderPoint":750,"safetyStockLevel":1000},{"productId":1,"locationId":6,"productName":null,"productNumber":null,"locationName":null,"shelf":null,"bin":null,"quantity":324,"reorderPoint":750,"safetyStockLevel":1000}]"#.utf8
+        )
+
+        let rows = try decoder.decode([Inventory].self, from: data)
+        try context.save()
+
+        // Same product at two locations stays two rows with two IDs.
+        #expect(rows.map(\.id) == ["1-1", "1-6"])
+        let saved = try context.fetch(NSFetchRequest<Inventory>(entityName: "Inventory"))
+        #expect(saved.count == 2)
+
+        // Nulls decode and show placeholders instead of breaking the list.
+        let first = try #require(rows.first)
+        let second = try #require(rows.last)
+        #expect(first.displayShelfBin == "Shelf A, Bin 1")
+        #expect(second.shelf == nil)
+        #expect(second.bin == nil)
+        #expect(second.displayName == "Unnamed product")
+        #expect(second.displayLocation == "Location 6")
+        #expect(second.displayShelfBin == "No shelf assigned")
+    }
+
+    @Test
+    func stockLevelUsesSketchBandsAndReorderPointFlag() {
+        func level(_ quantity: Int64, reorder: Int64 = 750, safety: Int64 = 1000) -> StockLevel {
+            StockLevel(quantity: quantity, reorderPoint: reorder, safetyStockLevel: safety)
+        }
+
+        #expect(level(0).status == .outOfStock)
+        #expect(level(0).band == .red)
+        #expect(level(250).status == .critical)
+        #expect(level(250).band == .red)
+        #expect(level(251).status == .reorder)
+        #expect(level(251).band == .orange)
+        #expect(level(500).band == .orange)
+        #expect(level(501).band == .yellow)
+        #expect(level(750).status == .reorder)
+        #expect(level(750).band == .yellow)
+        #expect(level(750).needsReorder)
+        #expect(level(751).status == .low)
+        #expect(level(751).band == .green)
+        #expect(level(999).band == .green)
+        #expect(level(1000).status == .inStock)
+        #expect(level(1000).band == .blue)
+
+        // The Reorder flag follows the reorder point, not the color band.
+        #expect(level(850, reorder: 900).status == .reorder)
+
+        // No safety stock set: no divide by zero.
+        #expect(level(0, reorder: 0, safety: 0).status == .outOfStock)
+        #expect(level(5, reorder: 0, safety: 0).status == .inStock)
+        #expect(level(5, reorder: 0, safety: 0).fractionOfSafetyStock == nil)
+
+        // Every status has its own icon, so color is never the only signal.
+        let icons = Set(StockLevel.Status.allCases.map(\.systemImage))
+        #expect(icons.count == StockLevel.Status.allCases.count)
+
+        #expect(StockLevel.worstFirst(level(0), level(100)))
+        #expect(StockLevel.worstFirst(level(100), level(200)))
+        #expect(!StockLevel.worstFirst(level(1000), level(800)))
+    }
+
+    @Test
+    func inventoryListSortsWorstFirstAndSearches() {
+        let context = PersistenceController(inMemory: true).container.viewContext
+        func line(_ productId: Int64, _ name: String, location: Int64,
+                  _ locationName: String, quantity: Int64) -> InventoryLine {
+            let item = Inventory(context: context)
+            item.productId = productId
+            item.productName = name
+            item.productNumber = "AW-\(productId)"
+            item.locationId = location
+            item.locationName = locationName
+            item.quantity = quantity
+            item.reorderPoint = 75
+            item.safetyStockLevel = 100
+            return InventoryLine(item)
+        }
+        let lines = [
+            line(1, "Chain", location: 1, "Tool Crib", quantity: 150),
+            line(2, "Frame", location: 1, "Tool Crib", quantity: 10),
+            line(3, "Pedal", location: 1, "Tool Crib", quantity: 80),
+            line(1, "Chain", location: 6, "Paint Shop", quantity: 0),
+            line(4, "Seat", location: 6, "Paint Shop", quantity: 120)
+        ]
+        let model = InventoryList.ViewModel()
+        model.setLines(lines)
+
+        // Paint Shop has an empty bin, so it comes first.
+        #expect(model.locations.all.map(\.id) == [6, 1])
+        #expect(model.locations.all.last?.lines.map(\.name) == ["Frame", "Pedal", "Chain"])
+        #expect(model.locations.all.map(\.needsReorderCount) == [1, 1])
+
+        model.searchText = "  paint "
+        #expect(model.locations.all.map(\.id) == [6])
+        #expect(model.hasActiveCriteria)
+        model.searchText = "AW-3"
+        #expect(model.locations.all.flatMap(\.lines).map(\.id) == ["3-1"])
+
+        model.clearCriteria()
+        #expect(!model.hasActiveCriteria)
+        #expect(model.locations.all.flatMap(\.lines).count == 5)
+    }
+
     private static func stubbedSession() -> URLSession {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [URLProtocolStub.self]
