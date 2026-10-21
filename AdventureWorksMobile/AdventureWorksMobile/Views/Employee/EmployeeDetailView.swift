@@ -18,7 +18,7 @@ struct EmployeeDetails: View {
     var body: some View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 8) {
-                Text("\(employee.firstName) \(employee.lastName)")
+                Text(employee.displayName)
                     .font(.default)
                     .padding(5)
 
@@ -33,8 +33,8 @@ struct EmployeeDetails: View {
                     .padding(5)
                 
                 
-                // ! force-unwraps shift, which is safe after the nil check.
-                if employee.shift != nil  { Text(employee.shift!).padding(5) }
+                // Only show the shift when the API sent one.
+                if let shift = employee.shift { Text(shift).padding(5) }
                 
             }
         }

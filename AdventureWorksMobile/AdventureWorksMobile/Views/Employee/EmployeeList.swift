@@ -26,14 +26,14 @@ struct EmployeeList: View {
                         } label: {
                             VStack(alignment: .leading, spacing: 2) {
                                 HStack {
-                                    Text("\(employee.firstName ?? "Missing First Name") \(employee.lastName ?? "Missing Last Name")")
+                                    Text(employee.displayName)
                                     Spacer()
-                                    Text("\(employee.department ?? "Missing Department")")
+                                    Text(employee.department)
                                         .foregroundStyle(.secondary)
                                         .font(.subheadline)
                                 }
                                 Spacer()
-                                Text(employee.jobTitle ?? "Missing Job Title")
+                                Text(employee.jobTitle)
                                     .foregroundStyle(.secondary)
                                     .font(.subheadline)
                             }
@@ -91,6 +91,12 @@ struct EmployeeRow: Identifiable, Hashable {
         jobTitle = e.jobTitle ?? ""
         shift = e.shift
         hireDate = e.hireDate
+    }
+
+    // First and last name, or a neutral placeholder when both are missing.
+    var displayName: String {
+        let name = [firstName, lastName].filter { !$0.isEmpty }.joined(separator: " ")
+        return name.isEmpty ? "Name not listed" : name
     }
 }
 

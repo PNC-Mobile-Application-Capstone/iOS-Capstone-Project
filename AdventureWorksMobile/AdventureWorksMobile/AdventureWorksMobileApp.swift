@@ -12,7 +12,6 @@ internal import CoreData
 @main
 struct AdventureWorksMobileApp: App {
 
-    private static let awAPIURL = "https://api.bootcampcentral.com/api"
     // @StateObject creates AuthStatus once at launch and keeps it alive while the app runs.
     @StateObject private var authStatus: AuthStatus
     private let persistenceController: PersistenceController
