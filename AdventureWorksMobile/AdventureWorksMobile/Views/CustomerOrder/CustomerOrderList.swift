@@ -16,11 +16,9 @@ struct CustomerOrderList: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                ListHeader(title: "Orders",
-                           errorMessage: viewModel.errorMessage)
-
-                VStack(spacing: 4) {
+            List {
+                // Search and sort live in the first row, so they scroll away like the rest of the list.
+                ListHeader(errorMessage: viewModel.errorMessage) {
                     HStack {
                         Button {
                             isSearchVisible.toggle()
@@ -57,57 +55,54 @@ struct CustomerOrderList: View {
                             }
                         }
                         .pickerStyle(.menu)
+                        .labelsHidden()
                         .accessibilityIdentifier("orderSortPicker")
                     }
                 }
-                .padding(.horizontal)
 
-                List {
-                    ForEach(viewModel.orders.shown) { order in
-                        NavigationLink {
-                            CustomerOrderDetails(order: order)
-                        } label: {
-                            VStack {
-                                HStack {
-                                    // verbatim shows the text as-is, so the number has no comma.
-                                    Text(verbatim: "Order #\(order.orderNumber)")
-                                    Spacer()
-                                    Text(order.total, format: .currency(code: "USD"))
-                                        .foregroundStyle(.secondary)
-                                }
-                                Text(order.customerName)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
+                // Show a "no results" view when a search matches nothing.
+                if !viewModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                   viewModel.orders.all.isEmpty {
+                    ContentUnavailableView.search(text: viewModel.searchText)
+                        .listRowBackground(Color.clear)
+                }
+
+                ForEach(viewModel.orders.shown) { order in
+                    NavigationLink {
+                        CustomerOrderDetails(order: order)
+                    } label: {
+                        VStack {
+                            HStack {
+                                // verbatim shows the text as-is, so the number has no comma.
+                                Text(verbatim: "Order #\(order.orderNumber)")
+                                Spacer()
+                                Text(order.total, format: .currency(code: "USD"))
                                     .foregroundStyle(.secondary)
-                                HStack {
-                                    Text("Ordered:")
-                                    Spacer()
-                                    DateText(date: order.orderDate)
-                                }
-                                .foregroundStyle(.secondary)
                             }
+                            Text(order.customerName)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .foregroundStyle(.secondary)
+                            HStack {
+                                Text("Ordered:")
+                                Spacer()
+                                DateText(date: order.orderDate)
+                            }
+                            .foregroundStyle(.secondary)
                         }
                     }
+                }
 
-                    // Reached the last loaded order: show the next page.
-                    if viewModel.orders.hasMore {
-                        LoadMoreRow { viewModel.orders.loadMore() }
-                    }
-                }
-                // Show a "no results" view when a search matches nothing.
-                .overlay {
-                    if !viewModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-                       viewModel.orders.all.isEmpty {
-                        ContentUnavailableView.search(text: viewModel.searchText)
-                    }
-                }
-                .refreshable {
-                    await viewModel.loadData(repository: repository, forceRefresh: true)
+                // Reached the last loaded order: show the next page.
+                if viewModel.orders.hasMore {
+                    LoadMoreRow { viewModel.orders.loadMore() }
                 }
             }
-            .background(Color(.systemGroupedBackground))
-            // ListHeader draws the title so it stays put. navigationTitle still names the back button.
+            .refreshable {
+                await viewModel.loadData(repository: repository, forceRefresh: true)
+            }
+            .scrollToTopButton(target: ListTop.id)
+            // The system large title shrinks into the nav bar on scroll, same as the Dashboard.
             .navigationTitle("Orders")
-            .toolbar(.hidden, for: .navigationBar)
             // Load the data when the screen appears.
             .task { await viewModel.loadData(repository: repository) }
         }

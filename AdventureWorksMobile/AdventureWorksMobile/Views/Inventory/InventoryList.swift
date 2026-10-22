@@ -29,11 +29,9 @@ struct InventoryList: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                ListHeader(title: "Inventory",
-                           errorMessage: viewModel.errorMessage)
-
-                VStack(spacing: 4) {
+            List {
+                // Search lives in the first row, so it scrolls away like the rest of the list.
+                ListHeader(errorMessage: viewModel.errorMessage) {
                     HStack {
                         Button {
                             isSearchVisible.toggle()
@@ -57,45 +55,41 @@ struct InventoryList: View {
                             .accessibilityIdentifier("inventorySearchField")
                     }
                 }
-                .padding(.horizontal)
 
-                List {
-                    ForEach(viewModel.locations.shown) { location in
-                        // A collapsible section per location, with an expandable row per product.
-                        Section(isExpanded: expansionBinding(for: location.id)) {
-                            ForEach(location.lines) { line in
-                                DisclosureGroup {
-                                    InventoryLineDetails(line: line)
-                                } label: {
-                                    InventoryLineRow(line: line)
-                                }
-                            }
-                        } header: {
-                            LocationHeader(location: location)
-                        }
-                    }
-
-                    // Reached the last loaded location: show the next page.
-                    if viewModel.locations.hasMore {
-                        LoadMoreRow { viewModel.locations.loadMore() }
-                    }
-                }
-                // Sidebar style gives each section its collapse arrow.
-                .listStyle(.sidebar)
                 // Show a "no results" view when a search matches nothing.
-                .overlay {
-                    if viewModel.isSearching, viewModel.locations.all.isEmpty {
-                        ContentUnavailableView.search(text: viewModel.searchText)
+                if viewModel.isSearching, viewModel.locations.all.isEmpty {
+                    ContentUnavailableView.search(text: viewModel.searchText)
+                        .listRowBackground(Color.clear)
+                }
+
+                ForEach(viewModel.locations.shown) { location in
+                    // A collapsible section per location, with an expandable row per product.
+                    Section(isExpanded: expansionBinding(for: location.id)) {
+                        ForEach(location.lines) { line in
+                            DisclosureGroup {
+                                InventoryLineDetails(line: line)
+                            } label: {
+                                InventoryLineRow(line: line)
+                            }
+                        }
+                    } header: {
+                        LocationHeader(location: location)
                     }
                 }
-                .refreshable {
-                    await viewModel.loadData(repository: repository, forceRefresh: true)
+
+                // Reached the last loaded location: show the next page.
+                if viewModel.locations.hasMore {
+                    LoadMoreRow { viewModel.locations.loadMore() }
                 }
             }
-            .background(Color(.systemGroupedBackground))
-            // ListHeader draws the title so it stays put. navigationTitle still names the back button.
+            // Sidebar style gives each section its collapse arrow.
+            .listStyle(.sidebar)
+            .refreshable {
+                await viewModel.loadData(repository: repository, forceRefresh: true)
+            }
+            .scrollToTopButton(target: ListTop.id)
+            // The system large title shrinks into the nav bar on scroll, same as the Dashboard.
             .navigationTitle("Inventory")
-            .toolbar(.hidden, for: .navigationBar)
             // Load the data when the screen appears.
             .task { await viewModel.loadData(repository: repository) }
         }
