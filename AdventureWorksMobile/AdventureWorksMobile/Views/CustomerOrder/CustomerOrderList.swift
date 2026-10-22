@@ -15,97 +15,88 @@ struct CustomerOrderList: View {
     @Environment(\.customerOrderRepository) private var repository
 
     var body: some View {
-        NavigationStack {
-            List {
-                // Search and sort live in the first row, so they scroll away like the rest of the list.
-                ListHeader(errorMessage: viewModel.errorMessage) {
-                    HStack {
-                        Button {
-                            isSearchVisible.toggle()
-                        } label: {
-                            // Button text is "Hide search", "Search", or "Search: <text>".
-                            Label(isSearchVisible ? "Hide search" :
-                                    (viewModel.searchText.isEmpty ? "Search" : "Search: \(viewModel.searchText)"),
-                                  systemImage: "magnifyingglass")
-                        }
-                        .accessibilityIdentifier("orderSearchButton")
-                        Spacer()
-                        Button("Clear", action: viewModel.clearCriteria)
-                            .disabled(!viewModel.hasActiveCriteria)
-                            .accessibilityIdentifier("clearCriteriaButton")
-                    }
-                    .padding(.vertical, 4)
+        PageTemplate("Orders",
+                     errorMessage: viewModel.errorMessage,
+                     onRefresh: { await viewModel.loadData(repository: repository, forceRefresh: true) }) {
+            HStack {
+                Button {
+                    isSearchVisible.toggle()
+                } label: {
+                    // Button text is "Hide search", "Search", or "Search: <text>".
+                    Label(isSearchVisible ? "Hide search" :
+                            (viewModel.searchText.isEmpty ? "Search" : "Search: \(viewModel.searchText)"),
+                          systemImage: "magnifyingglass")
+                }
+                .accessibilityIdentifier("orderSearchButton")
+                Spacer()
+                Button("Clear", action: viewModel.clearCriteria)
+                    .disabled(!viewModel.hasActiveCriteria)
+                    .accessibilityIdentifier("clearCriteriaButton")
+            }
+            .padding(.vertical, 4)
 
-                    if isSearchVisible {
-                        // $ makes a two-way binding, so typing updates searchText.
-                        TextField("Search customer or order number", text: $viewModel.searchText)
-                            .textFieldStyle(.roundedBorder)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                            .accessibilityIdentifier("orderSearchField")
-                    }
-                    HStack {
-                        Text("Sort by")
-                            .font(.subheadline)
-                        Spacer()
-                        // Each option's tag is the value the picker writes to sortOption.
-                        Picker("Sort by", selection: $viewModel.sortOption) {
-                            ForEach(SortOption.allCases) { option in
-                                Text(option.rawValue).tag(option)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                        .labelsHidden()
-                        .accessibilityIdentifier("orderSortPicker")
+            if isSearchVisible {
+                // $ makes a two-way binding, so typing updates searchText.
+                TextField("Search customer or order number", text: $viewModel.searchText)
+                    .textFieldStyle(.roundedBorder)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .accessibilityIdentifier("orderSearchField")
+            }
+            HStack {
+                Text("Sort by")
+                    .font(.subheadline)
+                Spacer()
+                // Each option's tag is the value the picker writes to sortOption.
+                Picker("Sort by", selection: $viewModel.sortOption) {
+                    ForEach(SortOption.allCases) { option in
+                        Text(option.rawValue).tag(option)
                     }
                 }
+                .pickerStyle(.menu)
+                .labelsHidden()
+                .accessibilityIdentifier("orderSortPicker")
+            }
+        } content: {
+            // Show a "no results" view when a search matches nothing.
+            if !viewModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+               viewModel.orders.all.isEmpty {
+                ContentUnavailableView.search(text: viewModel.searchText)
+                    .listRowBackground(Color.clear)
+            }
 
-                // Show a "no results" view when a search matches nothing.
-                if !viewModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-                   viewModel.orders.all.isEmpty {
-                    ContentUnavailableView.search(text: viewModel.searchText)
-                        .listRowBackground(Color.clear)
-                }
-
-                ForEach(viewModel.orders.shown) { order in
-                    NavigationLink {
-                        CustomerOrderDetails(order: order)
-                    } label: {
-                        VStack {
-                            HStack {
-                                // verbatim shows the text as-is, so the number has no comma.
-                                Text(verbatim: "Order #\(order.orderNumber)")
-                                Spacer()
-                                Text(order.total, format: .currency(code: "USD"))
-                                    .foregroundStyle(.secondary)
-                            }
-                            Text(order.customerName)
-                                .frame(maxWidth: .infinity, alignment: .leading)
+            ForEach(viewModel.orders.shown) { order in
+                NavigationLink {
+                    CustomerOrderDetails(order: order)
+                } label: {
+                    VStack {
+                        HStack {
+                            // verbatim shows the text as-is, so the number has no comma.
+                            Text(verbatim: "Order #\(order.orderNumber)")
+                            Spacer()
+                            Text(order.total, format: .currency(code: "USD"))
                                 .foregroundStyle(.secondary)
-                            HStack {
-                                Text("Ordered:")
-                                Spacer()
-                                DateText(date: order.orderDate)
-                            }
-                            .foregroundStyle(.secondary)
                         }
+                        Text(order.customerName)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .foregroundStyle(.secondary)
+                        HStack {
+                            Text("Ordered:")
+                            Spacer()
+                            DateText(date: order.orderDate)
+                        }
+                        .foregroundStyle(.secondary)
                     }
                 }
+            }
 
-                // Reached the last loaded order: show the next page.
-                if viewModel.orders.hasMore {
-                    LoadMoreRow { viewModel.orders.loadMore() }
-                }
+            // Reached the last loaded order: show the next page.
+            if viewModel.orders.hasMore {
+                LoadMoreRow { viewModel.orders.loadMore() }
             }
-            .refreshable {
-                await viewModel.loadData(repository: repository, forceRefresh: true)
-            }
-            .scrollToTopButton(target: ListTop.id)
-            // The system large title shrinks into the nav bar on scroll, same as the Dashboard.
-            .navigationTitle("Orders")
-            // Load the data when the screen appears.
-            .task { await viewModel.loadData(repository: repository) }
         }
+        // Load the data when the screen appears.
+        .task { await viewModel.loadData(repository: repository) }
     }
 }
 

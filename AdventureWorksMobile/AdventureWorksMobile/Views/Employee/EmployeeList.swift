@@ -13,53 +13,37 @@ struct EmployeeList: View {
     @State private var viewModel = ViewModel()
     @Environment(\.employeeRepository) private var repository
 
-    /// Where the scroll-to-top button jumps. The error row when one shows, otherwise the first employee.
-    private var topRowID: AnyHashable? {
-        if !viewModel.errorMessage.isEmpty { return ListTop.id }
-        return viewModel.items.shown.first.map { AnyHashable($0.id) }
-    }
-
     var body: some View {
-        NavigationStack {
-            List {
-                if !viewModel.errorMessage.isEmpty {
-                    ListHeader(errorMessage: viewModel.errorMessage)
-                }
-
-                ForEach(viewModel.items.shown) { employee in
-                    NavigationLink {
-                        EmployeeDetails(employee: employee)
-                    } label: {
-                        VStack(alignment: .leading, spacing: 2) {
-                            HStack {
-                                Text(employee.displayName)
-                                Spacer()
-                                Text(employee.department)
-                                    .foregroundStyle(.secondary)
-                                    .font(.subheadline)
-                            }
+        PageTemplate("Employees",
+                     errorMessage: viewModel.errorMessage,
+                     onRefresh: { await viewModel.loadData(repository: repository, forceRefresh: true) }) {
+            ForEach(viewModel.items.shown) { employee in
+                NavigationLink {
+                    EmployeeDetails(employee: employee)
+                } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack {
+                            Text(employee.displayName)
                             Spacer()
-                            Text(employee.jobTitle)
+                            Text(employee.department)
                                 .foregroundStyle(.secondary)
                                 .font(.subheadline)
                         }
+                        Spacer()
+                        Text(employee.jobTitle)
+                            .foregroundStyle(.secondary)
+                            .font(.subheadline)
                     }
                 }
+            }
 
-                // Reached the last loaded employee: show the next page.
-                if viewModel.items.hasMore {
-                    LoadMoreRow { viewModel.items.loadMore() }
-                }
+            // Reached the last loaded employee: show the next page.
+            if viewModel.items.hasMore {
+                LoadMoreRow { viewModel.items.loadMore() }
             }
-            .refreshable {
-                await viewModel.loadData(repository: repository, forceRefresh: true)
-            }
-            .scrollToTopButton(target: topRowID)
-            // The system large title shrinks into the nav bar on scroll, same as the Dashboard.
-            .navigationTitle("Employees")
-            // Load the data when the screen appears.
-            .task { await viewModel.loadData(repository: repository) }
         }
+        // Load the data when the screen appears.
+        .task { await viewModel.loadData(repository: repository) }
     }
 }
 

@@ -10,6 +10,7 @@ import SwiftUI
 /// Shows the button once the list scrolls past its header. Tapping it scrolls to `target`.
 struct ScrollToTopButton: ViewModifier {
     let target: AnyHashable?
+    var isEnabled: Bool = true
     @State private var isScrolledDown = false
 
     func body(content: Content) -> some View {
@@ -22,7 +23,7 @@ struct ScrollToTopButton: ViewModifier {
                     withAnimation(.snappy) { isScrolledDown = scrolledDown }
                 }
                 .overlay(alignment: .bottomTrailing) {
-                    if isScrolledDown, let target {
+                    if isEnabled, isScrolledDown, let target {
                         Button {
                             withAnimation { proxy.scrollTo(target, anchor: .top) }
                         } label: {
@@ -44,7 +45,7 @@ struct ScrollToTopButton: ViewModifier {
 }
 
 extension View {
-    func scrollToTopButton(target: AnyHashable?) -> some View {
-        modifier(ScrollToTopButton(target: target))
+    func scrollToTopButton(target: AnyHashable?, isEnabled: Bool = true) -> some View {
+        modifier(ScrollToTopButton(target: target, isEnabled: isEnabled))
     }
 }

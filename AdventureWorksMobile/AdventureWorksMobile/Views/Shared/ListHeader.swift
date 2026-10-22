@@ -2,7 +2,7 @@
 //  ListHeader.swift
 //  AdventureWorksMobile
 //
-//  Shared top row for the list screens. It scrolls with the list.
+//  Top row of every page. PageTemplate adds it for you.
 //
 
 import SwiftUI
@@ -22,29 +22,39 @@ struct ListHeader<Controls: View>: View {
         self.controls = controls()
     }
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            if !errorMessage.isEmpty {
-                Text(errorMessage)
-                    .font(.subheadline)
-                    .foregroundStyle(.red)
-            }
-            controls
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        // Without borderless, a tap anywhere in the row presses every button in it.
-        .buttonStyle(.borderless)
-        .id(ListTop.id)
-        .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 8, trailing: 16))
-        .listRowBackground(Color.clear)
-        .listRowSeparator(.hidden)
+    /// Nothing to show. The row becomes a hidden marker the scroll button can still jump to.
+    private var isEmpty: Bool {
+        errorMessage.isEmpty && Controls.self == EmptyView.self
     }
-}
 
-extension ListHeader where Controls == EmptyView {
-    /// Error text only, for screens with no search or sort.
-    init(errorMessage: String) {
-        self.init(errorMessage: errorMessage) { EmptyView() }
+    var body: some View {
+        if isEmpty {
+            Section {
+                Color.clear
+                    .frame(height: 0)
+                    .id(ListTop.id)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+            }
+            .listSectionSpacing(0)
+        } else {
+            VStack(alignment: .leading, spacing: 4) {
+                if !errorMessage.isEmpty {
+                    Text(errorMessage)
+                        .font(.subheadline)
+                        .foregroundStyle(.red)
+                }
+                controls
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            // Without borderless, a tap anywhere in the row presses every button in it.
+            .buttonStyle(.borderless)
+            .id(ListTop.id)
+            .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 8, trailing: 16))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+        }
     }
 }
 

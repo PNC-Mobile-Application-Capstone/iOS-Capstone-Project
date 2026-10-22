@@ -26,82 +26,73 @@ struct ProductList: View {
     }
 
     var body: some View {
-        NavigationStack {
-            List {
-                // Search and sort live in the first row, so they scroll away like the rest of the list.
-                ListHeader(errorMessage: viewModel.errorMessage) {
+        PageTemplate("Products",
+                     errorMessage: viewModel.errorMessage,
+                     onRefresh: { await viewModel.loadData(repository: repository, forceRefresh: true) }) {
+            HStack {
+                Button {
+                    isSearchVisible.toggle()
+                } label: {
+                    Label(searchButtonTitle, systemImage: "magnifyingglass")
+                }
+                .accessibilityIdentifier("productSearchButton")
+                Spacer()
+                Button("Clear", action: viewModel.clearCriteria)
+                    .disabled(!viewModel.hasActiveCriteria)
+                    .accessibilityIdentifier("clearCriteriaButton")
+            }
+            .padding(.vertical, 4)
+
+            if isSearchVisible {
+                // $ makes a two-way binding, so typing updates searchText.
+                TextField("Search name or product number", text: $viewModel.searchText)
+                    .textFieldStyle(.roundedBorder)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .accessibilityIdentifier("productSearchField")
+            }
+            HStack {
+                Text("Sort by")
+                    .font(.subheadline)
+                Spacer()
+                // Each option's tag is the value the picker writes to sortOption.
+                Picker("Sort by", selection: $viewModel.sortOption) {
+                    ForEach(SortOption.allCases) { option in
+                        Text(option.rawValue).tag(option)
+                    }
+                }
+                .pickerStyle(.menu)
+                .labelsHidden()
+                .accessibilityIdentifier("productSortPicker")
+            }
+        } content: {
+            // Show a "no results" view when a search matches nothing.
+            if !viewModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+               viewModel.items.all.isEmpty {
+                ContentUnavailableView.search(text: viewModel.searchText)
+                    .listRowBackground(Color.clear)
+            }
+
+            ForEach(viewModel.items.shown) { item in
+                NavigationLink {
+                    ProductDetails(product: item)
+                } label: {
                     HStack {
-                        Button {
-                            isSearchVisible.toggle()
-                        } label: {
-                            Label(searchButtonTitle, systemImage: "magnifyingglass")
-                        }
-                        .accessibilityIdentifier("productSearchButton")
+                        Text(item.name ?? "--")
                         Spacer()
-                        Button("Clear", action: viewModel.clearCriteria)
-                            .disabled(!viewModel.hasActiveCriteria)
-                            .accessibilityIdentifier("clearCriteriaButton")
+                        Text(item.listPrice, format: .currency(code: "USD"))
+                            .foregroundStyle(.secondary)
                     }
-                    .padding(.vertical, 4)
-
-                    if isSearchVisible {
-                        // $ makes a two-way binding, so typing updates searchText.
-                        TextField("Search name or product number", text: $viewModel.searchText)
-                            .textFieldStyle(.roundedBorder)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                            .accessibilityIdentifier("productSearchField")
-                    }
-                    HStack {
-                        Text("Sort by")
-                            .font(.subheadline)
-                        Spacer()
-                        // Each option's tag is the value the picker writes to sortOption.
-                        Picker("Sort by", selection: $viewModel.sortOption) {
-                            ForEach(SortOption.allCases) { option in
-                                Text(option.rawValue).tag(option)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                        .labelsHidden()
-                        .accessibilityIdentifier("productSortPicker")
-                    }
-                }
-
-                // Show a "no results" view when a search matches nothing.
-                if !viewModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-                   viewModel.items.all.isEmpty {
-                    ContentUnavailableView.search(text: viewModel.searchText)
-                        .listRowBackground(Color.clear)
-                }
-
-                ForEach(viewModel.items.shown) { item in
-                    NavigationLink {
-                        ProductDetails(product: item)
-                    } label: {
-                        HStack {
-                            Text(item.name ?? "--")
-                            Spacer()
-                            Text(item.listPrice, format: .currency(code: "USD"))
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                }
-
-                // Reached the last loaded product: show the next page.
-                if viewModel.items.hasMore {
-                    LoadMoreRow { viewModel.items.loadMore() }
                 }
             }
-            .refreshable {
-                await viewModel.loadData(repository: repository, forceRefresh: true)
+
+            // Reached the last loaded product: show the next page.
+            if viewModel.items.hasMore {
+                LoadMoreRow { viewModel.items.loadMore() }
             }
-            .scrollToTopButton(target: ListTop.id)
-            // The system large title shrinks into the nav bar on scroll, same as the Dashboard.
-            .navigationTitle("Products")
-            // Load the data when the screen appears.
-            .task { await viewModel.loadData(repository: repository) }
         }
+        // Load the data when the screen appears.
+        .task { await viewModel.loadData(repository: repository) }
     }
 }
 

@@ -11,14 +11,11 @@ struct AccountView: View {
     @EnvironmentObject var authStatus: AuthStatus
     
     var body: some View {
-        NavigationStack {
-            List {
-                Button("Log out") {
-                    // Clears both tokens, which sends the app back to LoginView.
-                    authStatus.logout()
-                }
+        PageTemplate("Account") {
+            Button("Log out") {
+                // Clears both tokens, which sends the app back to LoginView.
+                authStatus.logout()
             }
-            .navigationTitle("Account")
         }
     }
 }
