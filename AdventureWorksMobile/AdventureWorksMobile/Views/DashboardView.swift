@@ -10,6 +10,7 @@ import SwiftUI
 struct DashboardView: View {
     
     @State private var viewModel: ViewModel
+    @State private var showsDailySales = false
     
     // The repository is passed in so previews can use mock data.
     init(repository: any DashboardRepository) {
@@ -27,14 +28,37 @@ struct DashboardView: View {
                 }
                 
                 Section("Weekly Sales") {
-                    ForEach(viewModel.lastWeekSales) { entry in
-                        HStack {
-                            Text(entry.salesDate, format: .dateTime.weekday(.abbreviated))
-                            Spacer()
-                            // Dollars with no cents.
-                            Text(entry.totalSales, format: .currency(code: "USD").precision(.fractionLength(0)))
+                    Button {
+                        withAnimation { showsDailySales = !showsDailySales }
+                    } label: {
+                        VStack {
+                            BarChart(
+                                entries: viewModel.lastWeekSales.map { entry in
+                                        .init(
+                                            label:entry.salesDate.formatted(.dateTime.weekday(.abbreviated)),
+                                            value: entry.totalSales,
+                                            valueLabel: "$\(entry.totalSales.formatted(.number.notation(.compactName).precision(.fractionLength(1))))"
+                                        )
+                                })
+                            Label(showsDailySales ? "Hide List" : "Show List", systemImage: showsDailySales ? "chevron.up" : "chevron.down")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
                         }
                     }
+                    .buttonStyle(.plain)
+                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                    .accessibilityLabel(showsDailySales ? "Hides the daily sales list" : "Shows the daily sales list")
+                    
+                    if showsDailySales {
+                        ForEach(viewModel.lastWeekSales) { entry in
+                            HStack {
+                                Text(entry.salesDate, format: .dateTime.weekday(.abbreviated))
+                                Spacer()
+                                Text(entry.totalSales, format: .currency(code: "USD").precision(.fractionLength(0)))
+                            }
+                        }
+                    }
+                    
                 }
                 
                 Section("Top Sellers") {
@@ -123,8 +147,8 @@ extension DashboardView {
         var lastWeekSales: [WeeklySalesEntry] {
             guard let newest = weeklySales.map(\.salesDate).max(),
                   let cutoff = Calendar.current.date(byAdding: .day, value: -6, to: newest)
-            else { return [] }
-
+                    else { return [] }
+            
             return weeklySales
                 .filter { $0.salesDate >= cutoff }
                 .sorted { $0.salesDate < $1.salesDate }
@@ -154,17 +178,17 @@ extension DashboardView {
             async let performance = repository.getProductPerformance()
             async let stock = repository.getLowStock()
             async let staffShifts = repository.getShifts()
-
+            
             // A failed call only leaves its own section empty.
             do { weeklySales = try await sales }
             catch { print("weekly-sales failed: \(error)") }
-
+            
             do { productPerformance = try await performance }
             catch { print("best-worst failed: \(error)") }
-
+            
             do { lowStock = try await stock }
             catch { print("low-stock failed: \(error)") }
-
+            
             do { shifts = try await staffShifts }
             catch { print("shifts failed: \(error)") }
         }
