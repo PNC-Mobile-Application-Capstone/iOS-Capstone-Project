@@ -2,8 +2,6 @@
 //  Employee+CoreDataProperties.swift
 //  AdventureWorksMobile
 //
-//  Created by Tyler Swindell on 10/7/26.
-//
 //
 
 public import Foundation

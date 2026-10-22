@@ -2,8 +2,6 @@
 //  EmployeeList.swift
 //  AdventureWorksMobile
 //
-//  Created by Tyler Swindell on 10/14/26.
-//
 
 
 import SwiftUI

@@ -2,8 +2,6 @@
 //  AccountView.swift
 //  AdventureWorksMobile
 //
-//  Created by user302023 on 10/10/26.
-//
 import SwiftUI
 
 struct AccountView: View {

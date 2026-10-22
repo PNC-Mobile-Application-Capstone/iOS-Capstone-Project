@@ -2,8 +2,6 @@
 //  AdventureWorksMobileUITestsLaunchTests.swift
 //  AdventureWorksMobileUITests
 //
-//  Created by Nathan Bergman on 9/20/26.
-//
 
 import XCTest
 

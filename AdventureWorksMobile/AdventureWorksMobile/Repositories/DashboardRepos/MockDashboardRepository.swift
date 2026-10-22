@@ -2,8 +2,6 @@
 //  MockDashboardRepository.swift
 //  AdventureWorksMobile
 //
-//  Created by user302023 on 10/1/26.
-//
 
 import Foundation
 

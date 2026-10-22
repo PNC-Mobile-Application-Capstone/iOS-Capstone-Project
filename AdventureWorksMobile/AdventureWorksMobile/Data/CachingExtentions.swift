@@ -2,8 +2,6 @@
 //  CachingExtentions.swift
 //  AdventureWorksMobile
 //
-//  Created by Tyler Swindell on 9/20/26.
-//
 
 // Thrown when decoding or caching runs without a Core Data context.
 enum DecoderConfigurationError: Error {

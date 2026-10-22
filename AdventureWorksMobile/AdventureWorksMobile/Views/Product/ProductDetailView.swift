@@ -2,8 +2,6 @@
 //  ProductDetailView.swift
 //  AdventureWorksMobile
 //
-//  Created by Tyler Swindell on 9/25/26.
-//
 
 import SwiftUI
 
