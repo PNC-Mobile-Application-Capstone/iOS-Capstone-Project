@@ -15,7 +15,8 @@ struct ProductDetails: View {
     @State private var photoData: Data?
 
     var body: some View {
-        NavigationStack {
+        // ScrollView keeps the content at the top and lets long pages scroll.
+        ScrollView {
             VStack(alignment: .leading, spacing: 8) {
                 Text(product.name ?? "ERROR")
                     .font(.default)
@@ -54,8 +55,11 @@ struct ProductDetails: View {
                 Text(product.listPrice, format: .number.precision(.fractionLength(2)))
                     .padding(5)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding()
         }
-        .padding()
+        .navigationTitle(product.name ?? "Product")
+        .navigationBarTitleDisplayMode(.inline)
         .task { await loadPhoto() }
     }
 
