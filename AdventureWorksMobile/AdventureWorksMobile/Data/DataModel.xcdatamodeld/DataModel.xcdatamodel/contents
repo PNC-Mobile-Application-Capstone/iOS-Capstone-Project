@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="25249" systemVersion="25G76" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithSwiftData="YES" userDefinedModelVersionIdentifier="">
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="25249" systemVersion="26A434" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithSwiftData="YES" userDefinedModelVersionIdentifier="">
     <entity name="CustomerOrder" representedClassName="CustomerOrder" syncable="YES">
         <attribute name="customerId" optional="YES" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="firstName" optional="YES" attributeType="String"/>
@@ -51,12 +51,35 @@
         </uniquenessConstraints>
     </entity>
     <entity name="Product" representedClassName="Product" syncable="YES">
+        <attribute name="bikeFrame" optional="YES" attributeType="String"/>
         <attribute name="color" optional="YES" attributeType="String"/>
+        <attribute name="crankset" optional="YES" attributeType="String"/>
+        <attribute name="detailUpdatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="id" optional="YES" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="laborHours" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
         <attribute name="listPrice" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="lotSize" optional="YES" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="machineHours" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="maintenanceDescription" optional="YES" attributeType="String"/>
+        <attribute name="manufacturer" optional="YES" attributeType="String"/>
+        <attribute name="material" optional="YES" attributeType="String"/>
         <attribute name="name" optional="YES" attributeType="String"/>
+        <attribute name="numberOfSteps" optional="YES" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="pedalDescription" optional="YES" attributeType="String"/>
         <attribute name="photo" optional="YES" attributeType="Binary"/>
+        <attribute name="photoFileName" optional="YES" attributeType="String"/>
+        <attribute name="productLine" optional="YES" attributeType="String"/>
+        <attribute name="productModelId" optional="YES" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="productModelName" optional="YES" attributeType="String"/>
         <attribute name="productNumber" optional="YES" attributeType="String"/>
+        <attribute name="riderExperience" optional="YES" attributeType="String"/>
+        <attribute name="saddleDescription" optional="YES" attributeType="String"/>
+        <attribute name="setupHours" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="style" optional="YES" attributeType="String"/>
+        <attribute name="summary" optional="YES" attributeType="String"/>
+        <attribute name="warrantyDescription" optional="YES" attributeType="String"/>
+        <attribute name="warrantyPeriod" optional="YES" attributeType="String"/>
+        <attribute name="wheelDescription" optional="YES" attributeType="String"/>
         <uniquenessConstraints>
             <uniquenessConstraint>
                 <constraint value="id"/>

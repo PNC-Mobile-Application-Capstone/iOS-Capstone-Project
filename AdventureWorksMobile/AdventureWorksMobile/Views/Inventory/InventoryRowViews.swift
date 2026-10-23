@@ -2,8 +2,6 @@
 //  InventoryRowViews.swift
 //  AdventureWorksMobile
 //
-//  Created by Tyler Swindell on 10/18/26.
-//
 //  The pieces of the Inventory screen: the status icon, the location
 //  header, the product row, and the product details.
 //

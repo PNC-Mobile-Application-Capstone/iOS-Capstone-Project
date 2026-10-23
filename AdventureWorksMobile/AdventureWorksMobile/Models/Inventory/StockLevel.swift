@@ -2,8 +2,6 @@
 //  StockLevel.swift
 //  AdventureWorksMobile
 //
-//  Created by Tyler Swindell on 10/20/26.
-//
 
 import Foundation
 

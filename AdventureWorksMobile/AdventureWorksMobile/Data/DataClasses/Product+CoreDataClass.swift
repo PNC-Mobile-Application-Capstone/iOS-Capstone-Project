@@ -2,8 +2,6 @@
 //  Product+CoreDataClass.swift
 //  AdventureWorksMobile
 //
-//  Created by Tyler Swindell on 9/20/26.
-//
 //
 
 public import Foundation

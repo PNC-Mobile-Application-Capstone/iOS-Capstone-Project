@@ -2,8 +2,6 @@
 //  DashboardView.swift
 //  AdventureWorksMobile
 //
-//  Created by user302023 on 10/1/26.
-//
 
 import SwiftUI
 
@@ -18,95 +16,93 @@ struct DashboardView: View {
     }
     
     var body: some View {
-        
-        NavigationStack {
-            List {
-                Section("Overview") {
-                    statGrid
-                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                        .listRowBackground(Color.clear)
-                }
-                
-                Section("Weekly Sales") {
-                    Button {
-                        withAnimation { showsDailySales = !showsDailySales }
-                    } label: {
-                        VStack {
-                            BarChart(
-                                entries: viewModel.lastWeekSales.map { entry in
-                                        .init(
-                                            label:entry.salesDate.formatted(.dateTime.weekday(.abbreviated)),
-                                            value: entry.totalSales,
-                                            valueLabel: "$\(entry.totalSales.formatted(.number.notation(.compactName).precision(.fractionLength(1))))"
-                                        )
-                                })
-                            Label(showsDailySales ? "Hide List" : "Show List", systemImage: showsDailySales ? "chevron.up" : "chevron.down")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    .buttonStyle(.plain)
+        PageTemplate("Dashboard") {
+            Section("Overview") {
+                statGrid
                     .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                    .accessibilityLabel(showsDailySales ? "Hides the daily sales list" : "Shows the daily sales list")
-                    
-                    if showsDailySales {
-                        ForEach(viewModel.lastWeekSales) { entry in
-                            HStack {
-                                Text(entry.salesDate, format: .dateTime.weekday(.abbreviated))
-                                Spacer()
-                                Text(entry.totalSales, format: .currency(code: "USD").precision(.fractionLength(0)))
-                            }
-                        }
-                    }
-                    
-                }
-                
-                Section("Top Sellers") {
-                    ForEach(viewModel.topSellers) { product in
-                        HStack {
-                            Text(product.productName)
-                            Spacer()
-                            Text("\(product.unitsSold) sold")
-                                .foregroundColor(.green)
-                        }
-                    }
-                }
-                
-                Section("Underperforming") {
-                    ForEach(viewModel.underperformers) { product in
-                        HStack {
-                            Text(product.productName)
-                            Spacer()
-                            Text("\(product.unitsSold) sold")
-                                .foregroundColor(.red)
-                        }
+                    .listRowBackground(Color.clear)
+            }
+            
+            Section("Weekly Sales") {
+                // Tapping the chart shows or hides the daily list below it.
+                Button {
+                    withAnimation { showsDailySales = !showsDailySales }
+                } label: {
+                    VStack {
+                        BarChart(
+                            entries: viewModel.lastWeekSales.map { entry in
+                                    .init(
+                                        label: entry.salesDate.formatted(.dateTime.weekday(.abbreviated)),
+                                        value: entry.totalSales,
+                                        valueLabel: "$\(entry.totalSales.formatted(.number.notation(.compactName).precision(.fractionLength(1))))"
+                                    )
+                            })
+                        Label(showsDailySales ? "Hide List" : "Show List",
+                              systemImage: showsDailySales ? "chevron.up" : "chevron.down")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                     }
                 }
+                .buttonStyle(.plain)
+                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                .accessibilityHint(showsDailySales ? "Hides the daily sales list" : "Shows the daily sales list")
                 
-                Section("Low Stock Alert") {
-                    ForEach(viewModel.lowStock) { item in
+                if showsDailySales {
+                    ForEach(viewModel.lastWeekSales) { entry in
                         HStack {
-                            Image(systemName: "exclamationmark.circle.fill")
-                                .foregroundColor(item.isCritical ? .red : .orange)
-                            Text(item.productName)
+                            Text(entry.salesDate, format: .dateTime.weekday(.abbreviated))
                             Spacer()
-                            Text("\(item.stockLevel) left")
-                        }
-                    }
-                }
-                
-                Section("Today's Shifts") {
-                    ForEach(viewModel.shifts) { shift in
-                        HStack {
-                            Text(shift.fullName)
-                            Spacer()
-                            Text(shift.shift)
-                                .foregroundColor(.secondary)
+                            // Dollars with no cents.
+                            Text(entry.totalSales, format: .currency(code: "USD").precision(.fractionLength(0)))
                         }
                     }
                 }
             }
-            .navigationTitle("Dashboard")
+            
+            Section("Top Sellers") {
+                ForEach(viewModel.topSellers) { product in
+                    HStack {
+                        Text(product.productName)
+                        Spacer()
+                        Text("\(product.unitsSold) sold")
+                            .foregroundColor(.green)
+                    }
+                }
+            }
+            
+            Section("Underperforming") {
+                ForEach(viewModel.underperformers) { product in
+                    HStack {
+                        Text(product.productName)
+                        Spacer()
+                        Text("\(product.unitsSold) sold")
+                            .foregroundColor(.red)
+                    }
+                }
+            }
+            
+            Section("Low Stock Alert") {
+                ForEach(viewModel.lowStock) { item in
+                    HStack {
+                        Image(systemName: "exclamationmark.circle.fill")
+                            .foregroundColor(item.isCritical ? .red : .orange)
+                        Text(item.productName)
+                        Spacer()
+                        Text("\(item.stockLevel) left")
+                    }
+                }
+            }
+            
+            Section("Today's Shifts") {
+                ForEach(viewModel.shifts) { shift in
+                    HStack {
+                        Text(shift.fullName)
+                        Spacer()
+                        Text(shift.shift)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
         }
         .task {
             await viewModel.loadData()

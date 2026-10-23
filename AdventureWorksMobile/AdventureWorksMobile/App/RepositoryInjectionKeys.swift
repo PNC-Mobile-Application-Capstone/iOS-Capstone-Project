@@ -2,8 +2,6 @@
 //  RepositoryInjectionKeys.swift
 //  AdventureWorksMobile
 //
-//  Created by Tyler Swindell on 9/27/26.
-//
 
 import SwiftUI
 

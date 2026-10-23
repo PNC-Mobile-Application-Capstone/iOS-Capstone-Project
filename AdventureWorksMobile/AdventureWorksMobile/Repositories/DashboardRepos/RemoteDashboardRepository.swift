@@ -2,8 +2,6 @@
 //  RemoteDashboardRepository.swift
 //  AdventureWorksMobile
 //
-//  Created by user302023 on 10/14/26.
-//
 
 // Loads dashboard data from the API, with one base repository per response type.
 @MainActor
