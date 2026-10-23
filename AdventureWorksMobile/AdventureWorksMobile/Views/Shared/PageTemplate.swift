@@ -55,6 +55,7 @@ struct PageTemplate<Controls: View, Content: View>: View {
                 .scrollToTopButton(target: ListTop.id, isEnabled: showsScrollToTop)
                 // The system large title shrinks into the nav bar on scroll.
                 .navigationTitle(title)
+                .toolbarTitleDisplayMode(.inlineLarge)
         }
     }
 
@@ -65,6 +66,7 @@ struct PageTemplate<Controls: View, Content: View>: View {
         }
         // With no header, ListHeader is a 0 point marker row. This lets it be that small.
         .environment(\.defaultMinListRowHeight, hasHeader ? defaultMinRowHeight : 0)
+        .contentMargins(.top, 0, for: .scrollContent)
     }
 
     @ViewBuilder
