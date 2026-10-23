@@ -2,8 +2,6 @@
 //  TieredCacheRepositoryBase+ProductPhoto.swift
 //  AdventureWorksMobile
 //
-//  Created by Tyler Swindell on 10/9/26.
-//
 
 import Foundation
 import CryptoKit

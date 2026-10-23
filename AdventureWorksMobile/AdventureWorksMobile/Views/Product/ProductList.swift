@@ -2,8 +2,6 @@
 //  ProductList.swift
 //  AdventureWorksMobile
 //
-//  Created by Tyler Swindell on 9/20/26.
-//
 
 import SwiftUI
 
@@ -26,87 +24,73 @@ struct ProductList: View {
     }
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                ListHeader(title: "Products",
-                           errorMessage: viewModel.errorMessage)
+        PageTemplate("Products",
+                     errorMessage: viewModel.errorMessage,
+                     onRefresh: { await viewModel.loadData(repository: repository, forceRefresh: true) }) {
+            HStack {
+                Button {
+                    isSearchVisible.toggle()
+                } label: {
+                    Label(searchButtonTitle, systemImage: "magnifyingglass")
+                }
+                .accessibilityIdentifier("productSearchButton")
+                Spacer()
+                Button("Clear", action: viewModel.clearCriteria)
+                    .disabled(!viewModel.hasActiveCriteria)
+                    .accessibilityIdentifier("clearCriteriaButton")
+            }
+            .padding(.vertical, 4)
 
-                VStack(spacing: 4) {
+            if isSearchVisible {
+                // $ makes a two-way binding, so typing updates searchText.
+                TextField("Search name or product number", text: $viewModel.searchText)
+                    .textFieldStyle(.roundedBorder)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .accessibilityIdentifier("productSearchField")
+            }
+            HStack {
+                Text("Sort by")
+                    .font(.subheadline)
+                Spacer()
+                // Each option's tag is the value the picker writes to sortOption.
+                Picker("Sort by", selection: $viewModel.sortOption) {
+                    ForEach(SortOption.allCases) { option in
+                        Text(option.rawValue).tag(option)
+                    }
+                }
+                .pickerStyle(.menu)
+                .labelsHidden()
+                .accessibilityIdentifier("productSortPicker")
+            }
+        } content: {
+            // Show a "no results" view when a search matches nothing.
+            if !viewModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+               viewModel.items.all.isEmpty {
+                ContentUnavailableView.search(text: viewModel.searchText)
+                    .listRowBackground(Color.clear)
+            }
+
+            ForEach(viewModel.items.shown) { item in
+                NavigationLink {
+                    ProductDetails(product: item)
+                } label: {
                     HStack {
-                        Button {
-                            isSearchVisible.toggle()
-                        } label: {
-                            Label(searchButtonTitle, systemImage: "magnifyingglass")
-                        }
-                        .accessibilityIdentifier("productSearchButton")
+                        Text(item.name ?? "--")
                         Spacer()
-                        Button("Clear", action: viewModel.clearCriteria)
-                            .disabled(!viewModel.hasActiveCriteria)
-                            .accessibilityIdentifier("clearCriteriaButton")
+                        Text(item.listPrice, format: .currency(code: "USD"))
+                            .foregroundStyle(.secondary)
                     }
-                    .padding(.vertical, 4)
-
-                    if isSearchVisible {
-                        // $ makes a two-way binding, so typing updates searchText.
-                        TextField("Search name or product number", text: $viewModel.searchText)
-                            .textFieldStyle(.roundedBorder)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                            .accessibilityIdentifier("productSearchField")
-                    }
-                    HStack {
-                        Text("Sort by")
-                            .font(.subheadline)
-                        Spacer()
-                        // Each option's tag is the value the picker writes to sortOption.
-                        Picker("Sort by", selection: $viewModel.sortOption) {
-                            ForEach(SortOption.allCases) { option in
-                                Text(option.rawValue).tag(option)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                        .accessibilityIdentifier("productSortPicker")
-                    }
-                }
-                .padding(.horizontal)
-
-                List {
-                    ForEach(viewModel.items.shown) { item in
-                        NavigationLink {
-                            ProductDetails(product: item)
-                        } label: {
-                            HStack {
-                                Text(item.name ?? "--")
-                                Spacer()
-                                Text(item.listPrice, format: .currency(code: "USD"))
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                    }
-
-                    // Reached the last loaded product: show the next page.
-                    if viewModel.items.hasMore {
-                        LoadMoreRow { viewModel.items.loadMore() }
-                    }
-                }
-                // Show a "no results" view when a search matches nothing.
-                .overlay {
-                    if !viewModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-                       viewModel.items.all.isEmpty {
-                        ContentUnavailableView.search(text: viewModel.searchText)
-                    }
-                }
-                .refreshable {
-                    await viewModel.loadData(repository: repository, forceRefresh: true)
                 }
             }
-            .background(Color(.systemGroupedBackground))
-            // ListHeader draws the title so it stays put. navigationTitle still names the back button.
-            .navigationTitle("Products")
-            .toolbar(.hidden, for: .navigationBar)
-            // Load the data when the screen appears.
-            .task { await viewModel.loadData(repository: repository) }
+
+            // Reached the last loaded product: show the next page.
+            if viewModel.items.hasMore {
+                LoadMoreRow { viewModel.items.loadMore() }
+            }
         }
+        // Load the data when the screen appears.
+        .task { await viewModel.loadData(repository: repository) }
     }
 }
 

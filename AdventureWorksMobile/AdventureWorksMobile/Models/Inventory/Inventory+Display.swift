@@ -2,8 +2,6 @@
 //  Inventory+Display.swift
 //  AdventureWorksMobile
 //
-//  Created by Tyler Swindell on 10/18/26.
-//
 
 import Foundation
 

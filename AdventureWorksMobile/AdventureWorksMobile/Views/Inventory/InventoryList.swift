@@ -2,8 +2,6 @@
 //  InventoryList.swift
 //  AdventureWorksMobile
 //
-//  Created by Tyler Swindell on 10/18/26.
-//
 
 import SwiftUI
 
@@ -28,77 +26,61 @@ struct InventoryList: View {
     }
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                ListHeader(title: "Inventory",
-                           errorMessage: viewModel.errorMessage)
+        PageTemplate("Inventory",
+                     errorMessage: viewModel.errorMessage,
+                     listStyle: .sidebar,
+                     onRefresh: { await viewModel.loadData(repository: repository, forceRefresh: true) }) {
+            HStack {
+                Button {
+                    isSearchVisible.toggle()
+                } label: {
+                    Label(searchButtonTitle, systemImage: "magnifyingglass")
+                }
+                .accessibilityIdentifier("inventorySearchButton")
+                Spacer()
+                Button("Clear", action: viewModel.clearCriteria)
+                    .disabled(!viewModel.hasActiveCriteria)
+                    .accessibilityIdentifier("clearCriteriaButton")
+            }
+            .padding(.vertical, 4)
 
-                VStack(spacing: 4) {
-                    HStack {
-                        Button {
-                            isSearchVisible.toggle()
+            if isSearchVisible {
+                // $ makes a two-way binding, so typing updates searchText.
+                TextField("Search product, number, or location", text: $viewModel.searchText)
+                    .textFieldStyle(.roundedBorder)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .accessibilityIdentifier("inventorySearchField")
+            }
+        } content: {
+            // Show a "no results" view when a search matches nothing.
+            if viewModel.isSearching, viewModel.locations.all.isEmpty {
+                ContentUnavailableView.search(text: viewModel.searchText)
+                    .listRowBackground(Color.clear)
+            }
+
+            ForEach(viewModel.locations.shown) { location in
+                // A collapsible section per location, with an expandable row per product.
+                Section(isExpanded: expansionBinding(for: location.id)) {
+                    ForEach(location.lines) { line in
+                        DisclosureGroup {
+                            InventoryLineDetails(line: line)
                         } label: {
-                            Label(searchButtonTitle, systemImage: "magnifyingglass")
-                        }
-                        .accessibilityIdentifier("inventorySearchButton")
-                        Spacer()
-                        Button("Clear", action: viewModel.clearCriteria)
-                            .disabled(!viewModel.hasActiveCriteria)
-                            .accessibilityIdentifier("clearCriteriaButton")
-                    }
-                    .padding(.vertical, 4)
-
-                    if isSearchVisible {
-                        // $ makes a two-way binding, so typing updates searchText.
-                        TextField("Search product, number, or location", text: $viewModel.searchText)
-                            .textFieldStyle(.roundedBorder)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                            .accessibilityIdentifier("inventorySearchField")
-                    }
-                }
-                .padding(.horizontal)
-
-                List {
-                    ForEach(viewModel.locations.shown) { location in
-                        // A collapsible section per location, with an expandable row per product.
-                        Section(isExpanded: expansionBinding(for: location.id)) {
-                            ForEach(location.lines) { line in
-                                DisclosureGroup {
-                                    InventoryLineDetails(line: line)
-                                } label: {
-                                    InventoryLineRow(line: line)
-                                }
-                            }
-                        } header: {
-                            LocationHeader(location: location)
+                            InventoryLineRow(line: line)
                         }
                     }
-
-                    // Reached the last loaded location: show the next page.
-                    if viewModel.locations.hasMore {
-                        LoadMoreRow { viewModel.locations.loadMore() }
-                    }
-                }
-                // Sidebar style gives each section its collapse arrow.
-                .listStyle(.sidebar)
-                // Show a "no results" view when a search matches nothing.
-                .overlay {
-                    if viewModel.isSearching, viewModel.locations.all.isEmpty {
-                        ContentUnavailableView.search(text: viewModel.searchText)
-                    }
-                }
-                .refreshable {
-                    await viewModel.loadData(repository: repository, forceRefresh: true)
+                } header: {
+                    LocationHeader(location: location)
                 }
             }
-            .background(Color(.systemGroupedBackground))
-            // ListHeader draws the title so it stays put. navigationTitle still names the back button.
-            .navigationTitle("Inventory")
-            .toolbar(.hidden, for: .navigationBar)
-            // Load the data when the screen appears.
-            .task { await viewModel.loadData(repository: repository) }
+
+            // Reached the last loaded location: show the next page.
+            if viewModel.locations.hasMore {
+                LoadMoreRow { viewModel.locations.loadMore() }
+            }
         }
+        // Load the data when the screen appears.
+        .task { await viewModel.loadData(repository: repository) }
     }
 
     /// Open or closed state for a location. Always open while searching so matches stay visible.

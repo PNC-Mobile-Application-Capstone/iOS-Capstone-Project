@@ -2,8 +2,6 @@
 //  ProductDetailView.swift
 //  AdventureWorksMobile
 //
-//  Created by Tyler Swindell on 9/25/26.
-//
 
 import SwiftUI
 
@@ -14,12 +12,12 @@ struct ProductDetails: View {
     @ObservedObject var product: Product
     
     var body: some View {
-        
-        // MARK: - Display components
-        List {
-            Section {
-                header
-                    .listRowBackground(Color.clear)
+        // ScrollView keeps the content at the top and lets long pages scroll.
+        ScrollView {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(product.name ?? "ERROR")
+                    .font(.default)
+                    .padding(5)
                 
                 if viewModel.isLoading && product.detailUpdatedAt == nil {
                     HStack(spacing: 8) {
@@ -160,6 +158,8 @@ extension ProductDetails {
             } catch {
                 errorMessage = error.localizedDescription
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding()
         }
     }
 }
