@@ -2,8 +2,6 @@
 //  DashboardView.swift
 //  AdventureWorksMobile
 //
-//  Created by user302023 on 10/1/26.
-//
 
 import SwiftUI
 
@@ -17,72 +15,68 @@ struct DashboardView: View {
     }
     
     var body: some View {
-        
-        NavigationStack {
-            List {
-                Section("Overview") {
-                    statGrid
-                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                        .listRowBackground(Color.clear)
-                }
-                
-                Section("Weekly Sales") {
-                    ForEach(viewModel.lastWeekSales) { entry in
-                        HStack {
-                            Text(entry.salesDate, format: .dateTime.weekday(.abbreviated))
-                            Spacer()
-                            // Dollars with no cents.
-                            Text(entry.totalSales, format: .currency(code: "USD").precision(.fractionLength(0)))
-                        }
-                    }
-                }
-                
-                Section("Top Sellers") {
-                    ForEach(viewModel.topSellers) { product in
-                        HStack {
-                            Text(product.productName)
-                            Spacer()
-                            Text("\(product.unitsSold) sold")
-                                .foregroundColor(.green)
-                        }
-                    }
-                }
-                
-                Section("Underperforming") {
-                    ForEach(viewModel.underperformers) { product in
-                        HStack {
-                            Text(product.productName)
-                            Spacer()
-                            Text("\(product.unitsSold) sold")
-                                .foregroundColor(.red)
-                        }
-                    }
-                }
-                
-                Section("Low Stock Alert") {
-                    ForEach(viewModel.lowStock) { item in
-                        HStack {
-                            Image(systemName: "exclamationmark.circle.fill")
-                                .foregroundColor(item.isCritical ? .red : .orange)
-                            Text(item.productName)
-                            Spacer()
-                            Text("\(item.stockLevel) left")
-                        }
-                    }
-                }
-                
-                Section("Today's Shifts") {
-                    ForEach(viewModel.shifts) { shift in
-                        HStack {
-                            Text(shift.fullName)
-                            Spacer()
-                            Text(shift.shift)
-                                .foregroundColor(.secondary)
-                        }
+        PageTemplate("Dashboard") {
+            Section("Overview") {
+                statGrid
+                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                    .listRowBackground(Color.clear)
+            }
+            
+            Section("Weekly Sales") {
+                ForEach(viewModel.lastWeekSales) { entry in
+                    HStack {
+                        Text(entry.salesDate, format: .dateTime.weekday(.abbreviated))
+                        Spacer()
+                        // Dollars with no cents.
+                        Text(entry.totalSales, format: .currency(code: "USD").precision(.fractionLength(0)))
                     }
                 }
             }
-            .navigationTitle("Dashboard")
+            
+            Section("Top Sellers") {
+                ForEach(viewModel.topSellers) { product in
+                    HStack {
+                        Text(product.productName)
+                        Spacer()
+                        Text("\(product.unitsSold) sold")
+                            .foregroundColor(.green)
+                    }
+                }
+            }
+            
+            Section("Underperforming") {
+                ForEach(viewModel.underperformers) { product in
+                    HStack {
+                        Text(product.productName)
+                        Spacer()
+                        Text("\(product.unitsSold) sold")
+                            .foregroundColor(.red)
+                    }
+                }
+            }
+            
+            Section("Low Stock Alert") {
+                ForEach(viewModel.lowStock) { item in
+                    HStack {
+                        Image(systemName: "exclamationmark.circle.fill")
+                            .foregroundColor(item.isCritical ? .red : .orange)
+                        Text(item.productName)
+                        Spacer()
+                        Text("\(item.stockLevel) left")
+                    }
+                }
+            }
+            
+            Section("Today's Shifts") {
+                ForEach(viewModel.shifts) { shift in
+                    HStack {
+                        Text(shift.fullName)
+                        Spacer()
+                        Text(shift.shift)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
         }
         .task {
             await viewModel.loadData()

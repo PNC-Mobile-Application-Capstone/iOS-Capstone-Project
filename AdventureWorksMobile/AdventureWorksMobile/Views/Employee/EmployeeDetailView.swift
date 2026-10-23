@@ -1,8 +1,6 @@
 //
-//  ProductDetails.swift
+//  EmployeeDetailView.swift
 //  AdventureWorksMobile
-//
-//  Created by Tyler Swindell on 10/14/26.
 //
 
 
@@ -16,7 +14,8 @@ struct EmployeeDetails: View {
     
 
     var body: some View {
-        NavigationStack {
+        // ScrollView keeps the content at the top and lets long pages scroll.
+        ScrollView {
             VStack(alignment: .leading, spacing: 8) {
                 Text(employee.displayName)
                     .font(.default)
@@ -37,8 +36,11 @@ struct EmployeeDetails: View {
                 if let shift = employee.shift { Text(shift).padding(5) }
                 
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding()
         }
-        .padding()
+        .navigationTitle(employee.displayName)
+        .navigationBarTitleDisplayMode(.inline)
     }
 
 }

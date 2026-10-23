@@ -2,8 +2,6 @@
 //  EmployeeList.swift
 //  AdventureWorksMobile
 //
-//  Created by Tyler Swindell on 10/14/26.
-//
 
 
 import SwiftUI
@@ -14,48 +12,36 @@ struct EmployeeList: View {
     @Environment(\.employeeRepository) private var repository
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                ListHeader(title: "Employees",
-                           errorMessage: viewModel.errorMessage)
-
-                List {
-                    ForEach(viewModel.items.shown) { employee in
-                        NavigationLink {
-                            EmployeeDetails(employee: employee)
-                        } label: {
-                            VStack(alignment: .leading, spacing: 2) {
-                                HStack {
-                                    Text(employee.displayName)
-                                    Spacer()
-                                    Text(employee.department)
-                                        .foregroundStyle(.secondary)
-                                        .font(.subheadline)
-                                }
-                                Spacer()
-                                Text(employee.jobTitle)
-                                    .foregroundStyle(.secondary)
-                                    .font(.subheadline)
-                            }
+        PageTemplate("Employees",
+                     errorMessage: viewModel.errorMessage,
+                     onRefresh: { await viewModel.loadData(repository: repository, forceRefresh: true) }) {
+            ForEach(viewModel.items.shown) { employee in
+                NavigationLink {
+                    EmployeeDetails(employee: employee)
+                } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack {
+                            Text(employee.displayName)
+                            Spacer()
+                            Text(employee.department)
+                                .foregroundStyle(.secondary)
+                                .font(.subheadline)
                         }
+                        Spacer()
+                        Text(employee.jobTitle)
+                            .foregroundStyle(.secondary)
+                            .font(.subheadline)
                     }
-
-                    // Reached the last loaded employee: show the next page.
-                    if viewModel.items.hasMore {
-                        LoadMoreRow { viewModel.items.loadMore() }
-                    }
-                }
-                .refreshable {
-                    await viewModel.loadData(repository: repository, forceRefresh: true)
                 }
             }
-            .background(Color(.systemGroupedBackground))
-            // ListHeader draws the title so it stays put. navigationTitle still names the back button.
-            .navigationTitle("Employees")
-            .toolbar(.hidden, for: .navigationBar)
-            // Load the data when the screen appears.
-            .task { await viewModel.loadData(repository: repository) }
+
+            // Reached the last loaded employee: show the next page.
+            if viewModel.items.hasMore {
+                LoadMoreRow { viewModel.items.loadMore() }
+            }
         }
+        // Load the data when the screen appears.
+        .task { await viewModel.loadData(repository: repository) }
     }
 }
 

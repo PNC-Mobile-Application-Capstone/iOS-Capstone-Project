@@ -2,8 +2,6 @@
 //  CustomerOrderList.swift
 //  AdventureWorksMobile
 //
-//  Created by Tyler Swindell on 9/20/26.
-//
 
 import SwiftUI
 
@@ -15,102 +13,88 @@ struct CustomerOrderList: View {
     @Environment(\.customerOrderRepository) private var repository
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                ListHeader(title: "Orders",
-                           errorMessage: viewModel.errorMessage)
+        PageTemplate("Orders",
+                     errorMessage: viewModel.errorMessage,
+                     onRefresh: { await viewModel.loadData(repository: repository, forceRefresh: true) }) {
+            HStack {
+                Button {
+                    isSearchVisible.toggle()
+                } label: {
+                    // Button text is "Hide search", "Search", or "Search: <text>".
+                    Label(isSearchVisible ? "Hide search" :
+                            (viewModel.searchText.isEmpty ? "Search" : "Search: \(viewModel.searchText)"),
+                          systemImage: "magnifyingglass")
+                }
+                .accessibilityIdentifier("orderSearchButton")
+                Spacer()
+                Button("Clear", action: viewModel.clearCriteria)
+                    .disabled(!viewModel.hasActiveCriteria)
+                    .accessibilityIdentifier("clearCriteriaButton")
+            }
+            .padding(.vertical, 4)
 
-                VStack(spacing: 4) {
-                    HStack {
-                        Button {
-                            isSearchVisible.toggle()
-                        } label: {
-                            // Button text is "Hide search", "Search", or "Search: <text>".
-                            Label(isSearchVisible ? "Hide search" :
-                                    (viewModel.searchText.isEmpty ? "Search" : "Search: \(viewModel.searchText)"),
-                                  systemImage: "magnifyingglass")
-                        }
-                        .accessibilityIdentifier("orderSearchButton")
-                        Spacer()
-                        Button("Clear", action: viewModel.clearCriteria)
-                            .disabled(!viewModel.hasActiveCriteria)
-                            .accessibilityIdentifier("clearCriteriaButton")
-                    }
-                    .padding(.vertical, 4)
-
-                    if isSearchVisible {
-                        // $ makes a two-way binding, so typing updates searchText.
-                        TextField("Search customer or order number", text: $viewModel.searchText)
-                            .textFieldStyle(.roundedBorder)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                            .accessibilityIdentifier("orderSearchField")
-                    }
-                    HStack {
-                        Text("Sort by")
-                            .font(.subheadline)
-                        Spacer()
-                        // Each option's tag is the value the picker writes to sortOption.
-                        Picker("Sort by", selection: $viewModel.sortOption) {
-                            ForEach(SortOption.allCases) { option in
-                                Text(option.rawValue).tag(option)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                        .accessibilityIdentifier("orderSortPicker")
+            if isSearchVisible {
+                // $ makes a two-way binding, so typing updates searchText.
+                TextField("Search customer or order number", text: $viewModel.searchText)
+                    .textFieldStyle(.roundedBorder)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .accessibilityIdentifier("orderSearchField")
+            }
+            HStack {
+                Text("Sort by")
+                    .font(.subheadline)
+                Spacer()
+                // Each option's tag is the value the picker writes to sortOption.
+                Picker("Sort by", selection: $viewModel.sortOption) {
+                    ForEach(SortOption.allCases) { option in
+                        Text(option.rawValue).tag(option)
                     }
                 }
-                .padding(.horizontal)
+                .pickerStyle(.menu)
+                .labelsHidden()
+                .accessibilityIdentifier("orderSortPicker")
+            }
+        } content: {
+            // Show a "no results" view when a search matches nothing.
+            if !viewModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+               viewModel.orders.all.isEmpty {
+                ContentUnavailableView.search(text: viewModel.searchText)
+                    .listRowBackground(Color.clear)
+            }
 
-                List {
-                    ForEach(viewModel.orders.shown) { order in
-                        NavigationLink {
-                            CustomerOrderDetails(order: order)
-                        } label: {
-                            VStack {
-                                HStack {
-                                    // verbatim shows the text as-is, so the number has no comma.
-                                    Text(verbatim: "Order #\(order.orderNumber)")
-                                    Spacer()
-                                    Text(order.total, format: .currency(code: "USD"))
-                                        .foregroundStyle(.secondary)
-                                }
-                                Text(order.customerName)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .foregroundStyle(.secondary)
-                                HStack {
-                                    Text("Ordered:")
-                                    Spacer()
-                                    DateText(date: order.orderDate)
-                                }
+            ForEach(viewModel.orders.shown) { order in
+                NavigationLink {
+                    CustomerOrderDetails(order: order)
+                } label: {
+                    VStack {
+                        HStack {
+                            // verbatim shows the text as-is, so the number has no comma.
+                            Text(verbatim: "Order #\(order.orderNumber)")
+                            Spacer()
+                            Text(order.total, format: .currency(code: "USD"))
                                 .foregroundStyle(.secondary)
-                            }
                         }
+                        Text(order.customerName)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .foregroundStyle(.secondary)
+                        HStack {
+                            Text("Ordered:")
+                            Spacer()
+                            DateText(date: order.orderDate)
+                        }
+                        .foregroundStyle(.secondary)
                     }
-
-                    // Reached the last loaded order: show the next page.
-                    if viewModel.orders.hasMore {
-                        LoadMoreRow { viewModel.orders.loadMore() }
-                    }
-                }
-                // Show a "no results" view when a search matches nothing.
-                .overlay {
-                    if !viewModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-                       viewModel.orders.all.isEmpty {
-                        ContentUnavailableView.search(text: viewModel.searchText)
-                    }
-                }
-                .refreshable {
-                    await viewModel.loadData(repository: repository, forceRefresh: true)
                 }
             }
-            .background(Color(.systemGroupedBackground))
-            // ListHeader draws the title so it stays put. navigationTitle still names the back button.
-            .navigationTitle("Orders")
-            .toolbar(.hidden, for: .navigationBar)
-            // Load the data when the screen appears.
-            .task { await viewModel.loadData(repository: repository) }
+
+            // Reached the last loaded order: show the next page.
+            if viewModel.orders.hasMore {
+                LoadMoreRow { viewModel.orders.loadMore() }
+            }
         }
+        // Load the data when the screen appears.
+        .task { await viewModel.loadData(repository: repository) }
     }
 }
 

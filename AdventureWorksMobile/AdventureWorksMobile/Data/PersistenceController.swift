@@ -2,8 +2,6 @@
 //  PersistenceController.swift
 //  AdventureWorksMobile
 //
-//  Created by Tyler Swindell on 9/20/26.
-//
 
 // internal import uses CoreData in this module without exposing it to other modules.
 internal import CoreData
