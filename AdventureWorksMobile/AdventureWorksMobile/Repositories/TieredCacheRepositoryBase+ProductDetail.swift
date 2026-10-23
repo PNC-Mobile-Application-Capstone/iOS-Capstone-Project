@@ -2,8 +2,6 @@
 //  TieredCacheRepositoryBase+ProductDetail.swift
 //  AdventureWorksMobile
 //
-//  Created by jonah on 10/20/26.
-//
 
 import Foundation
 internal import CoreData
