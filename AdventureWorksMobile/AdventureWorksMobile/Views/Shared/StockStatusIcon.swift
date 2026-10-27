@@ -1,23 +1,45 @@
+//
+//  StockStatusIcon.swift
+//  AdventureWorksMobile
+//
+import SwiftUI
+
 /// The stock status icon.
 struct StockStatusIcon: View {
     let level: StockLevel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State var isVisible = false
-
-    var body: some View {
+    @State private var isVisible = false
+    
+    private var icon: some View {
+        
         let status = level.status
         let color = level.band.color
 
-        Image(systemName: status.systemImage)
+        return Image(systemName: status.systemImage)
             .font(.title3)
             .foregroundStyle(color)
             // Glow when urgent, and pulse when critical unless Reduce Motion is on.
             .shadow(color: status.isUrgent ? color.opacity(0.8) : .clear,
                     radius: status.isUrgent ? 6 : 0)
-            .symbolEffect(.pulse.wholeSymbol, isActive: isVisible && status.pulses && !reduceMotion)
             .frame(minWidth: 28)
             .accessibilityHidden(true)
-            .onAppear { isVisible = true }
-            .onDisappear() { isVisible = false }
+            
+    }
+    
+    // A fixed start date, so every icon ticks at the same moments.
+    private static let pulseClock = PeriodicTimelineSchedule(
+        from: Date(timeIntervalSinceReferenceDate: 0), by: 1.5)
+
+    var body: some View {
+        let status = level.status
+        
+        if status.pulses && !reduceMotion {
+            TimelineView(Self.pulseClock) { context in
+                icon
+                    // One pulse each time the shared clock ticks.
+                    .symbolEffect(.pulse.wholeSymbol, options: .nonRepeating, value: context.date)
+            }
+        } else { icon }
+
     }
 }

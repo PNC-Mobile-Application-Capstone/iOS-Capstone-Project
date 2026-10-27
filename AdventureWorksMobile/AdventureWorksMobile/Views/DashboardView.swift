@@ -95,8 +95,6 @@ struct DashboardView: View {
                     }
                 }
             }
-            .accessibilityElement(children: .ignore)
-
             
             Section("Today's Shifts") {
                 ForEach(viewModel.shifts) { shift in
