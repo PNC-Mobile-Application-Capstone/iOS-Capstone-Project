@@ -84,14 +84,19 @@ struct DashboardView: View {
             Section("Low Stock Alert") {
                 ForEach(viewModel.lowStock) { item in
                     HStack {
-                        Image(systemName: "exclamationmark.circle.fill")
-                            .foregroundColor(item.isCritical ? .red : .orange)
+                        StockStatusIcon(level: StockLevel(
+                            quantity: item.stockLevel,
+                            reorderPoint: item.reorderPoint,
+                            safetyStockLevel: item.safetyStockLevel ?? 1000)
+                        )
                         Text(item.productName)
                         Spacer()
                         Text("\(item.stockLevel) left")
                     }
                 }
             }
+            .accessibilityElement(children: .ignore)
+
             
             Section("Today's Shifts") {
                 ForEach(viewModel.shifts) { shift in
