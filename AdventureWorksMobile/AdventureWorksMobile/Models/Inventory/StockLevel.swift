@@ -90,7 +90,7 @@ nonisolated struct StockLevel: Equatable {
         var isUrgent: Bool { self <= .reorder }
 
         /// The two worst. These also pulse, unless Reduce Motion is on.
-        var pulses: Bool { self <= .critical }
+        var pulses: Bool { self == .critical || self == .outOfStock }
     }
 
     nonisolated enum Band: CaseIterable {

@@ -34,9 +34,9 @@ class MockDashboardRepository: DashboardRepository {
     
     func getLowStock() async throws -> [LowStockEntry] {
         [
-            LowStockEntry(productId: 3, productName: "Mountain-100 Black, 38", stockLevel: 7, reorderPoint: 20),
-            LowStockEntry(productId: 6, productName: "Half-Finger Gloves, S", stockLevel: 6, reorderPoint: 25),
-            LowStockEntry(productId: 9, productName: "Carbon Fiber Racket", stockLevel: 11, reorderPoint: 15)
+            LowStockEntry(productId: 3, productName: "Mountain-100 Black, 38", stockLevel: 7, reorderPoint: 20, safetyStockLevel: 50),
+            LowStockEntry(productId: 6, productName: "Half-Finger Gloves, S", stockLevel: 6, reorderPoint: 25, safetyStockLevel: 45),
+            LowStockEntry(productId: 9, productName: "Carbon Fiber Racket", stockLevel: 11, reorderPoint: 15, safetyStockLevel: 20)
         ]
     }
     
