@@ -35,7 +35,10 @@ struct EmployeeDetails: View {
                 Text("Hired on")
                 DateText(date: employee.hireDate)
             }
-            .padding(5)
+                .padding(5)
+            
+            Text("Employee ID: \(employee.id)")
+                .padding(5)
             
             Spacer()
         }
