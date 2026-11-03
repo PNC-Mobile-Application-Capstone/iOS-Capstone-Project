@@ -2,11 +2,10 @@
 //  StatBlock.swift
 //  AdventureWorksMobile
 //
-//  Created by user302023 on 10/1/26.
-//
 
 import SwiftUI
 
+// One labeled number on the dashboard grid.
 struct StatBlock: View {
 
     let label: String

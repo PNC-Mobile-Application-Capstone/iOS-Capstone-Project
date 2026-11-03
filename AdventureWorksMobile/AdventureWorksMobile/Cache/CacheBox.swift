@@ -2,16 +2,10 @@
 //  CacheBox.swift
 //  AdventureWorksMobile
 //
-//  Created by Tyler Swindell on 9/20/26.
-//
 
 import Foundation
 
-/// Reference-type wrapper used by `NSCache`.
-///
-/// Managed objects are retained directly instead of being encoded and decoded.
-/// Decoding a managed object requires a context and would create duplicate
-/// objects, which made the previous JSON-backed memory cache unreliable.
+/// Holds managed objects and a timestamp for NSCache, which only stores classes.
 final class CacheBox<Item: AnyObject> {
     let items: [Item]
     let timestamp: Date

@@ -2,11 +2,10 @@
 //  MockDashboardRepository.swift
 //  AdventureWorksMobile
 //
-//  Created by user302023 on 10/1/26.
-//
 
 import Foundation
 
+// Fake dashboard data for previews.
 class MockDashboardRepository: DashboardRepository {
     
     func getWeeklySales() async throws -> [WeeklySalesEntry] {
@@ -16,6 +15,7 @@ class MockDashboardRepository: DashboardRepository {
             (18_400, 5_520), (22_100, 6_630), (15_800, 4_740),
             (29_600, 8_880), (34_200, 10_260), (12_300, 3_690), (9_100, 2_730)
         ]
+        // Give each amount a date, counting back from today.
         return amounts.enumerated().map { offset, pair in
             let date = calendar.date(byAdding: .day, value: -(6 - offset), to: today)!
             return WeeklySalesEntry(salesDate: date, totalSales: pair.sales, totalProfit: pair.profit)
@@ -34,9 +34,9 @@ class MockDashboardRepository: DashboardRepository {
     
     func getLowStock() async throws -> [LowStockEntry] {
         [
-            LowStockEntry(productId: 3, productName: "Mountain-100 Black, 38", stockLevel: 7, reorderPoint: 20),
-            LowStockEntry(productId: 6, productName: "Half-Finger Gloves, S", stockLevel: 6, reorderPoint: 25),
-            LowStockEntry(productId: 9, productName: "Carbon Fiber Racket", stockLevel: 11, reorderPoint: 15)
+            LowStockEntry(productId: 3, productName: "Mountain-100 Black, 38", stockLevel: 7, reorderPoint: 20, safetyStockLevel: 50),
+            LowStockEntry(productId: 6, productName: "Half-Finger Gloves, S", stockLevel: 6, reorderPoint: 25, safetyStockLevel: 45),
+            LowStockEntry(productId: 9, productName: "Carbon Fiber Racket", stockLevel: 11, reorderPoint: 15, safetyStockLevel: 20)
         ]
     }
     

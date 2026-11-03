@@ -7,15 +7,10 @@
 
 import SwiftUI
 
-/// Holds every item for a list, but only hands the List one page at a time.
-///
-/// The API has no paging. Each list endpoint returns everything in one
-/// response, and the repository caches it. So the data is already on the
-/// phone. This struct keeps the screen light by only building rows for
-/// the items shown so far. `LoadMoreRow` asks for the next page when the
-/// user scrolls past the last loaded item.
+/// Holds every item but shows a page at a time. The API has no paging, so this keeps lists light.
 struct PagedItems<Item: Identifiable> {
     let pageSize: Int
+    // private(set) means other code can read these, but only this struct can change them.
     private(set) var all: [Item] = []
     private(set) var shownCount: Int
 
@@ -30,11 +25,10 @@ struct PagedItems<Item: Identifiable> {
     /// True while there are items left to reveal.
     var hasMore: Bool { shownCount < all.count }
 
-    /// Swaps in fresh data. Keeps how far the user has scrolled, so coming
-    /// back from a details page does not jump them to the top.
-    mutating func replace(with items: [Item]) {
+    /// Swaps in new data. Keeps the scroll depth unless resetPage is true, as on search or sort.
+    mutating func replace(with items: [Item], resetPage: Bool = false) {
         all = items
-        shownCount = max(shownCount, pageSize)
+        shownCount = resetPage ? pageSize : max(shownCount, pageSize)
     }
 
     /// Reveals the next page.
@@ -44,8 +38,7 @@ struct PagedItems<Item: Identifiable> {
     }
 }
 
-/// Goes at the bottom of a List. When it scrolls into view, it calls
-/// `loadMore`, so the next page appears as the user reaches the end.
+/// Spinner at the bottom of a List. Loads the next page when it scrolls into view.
 struct LoadMoreRow: View {
     let loadMore: () -> Void
 

@@ -2,8 +2,6 @@
 //  CustomerOrder+CoreDataProperties.swift
 //  AdventureWorksMobile
 //
-//  Created by Tyler Swindell on 10/7/26.
-//
 //
 
 public import Foundation
@@ -14,10 +12,12 @@ public typealias CustomerOrderCoreDataPropertiesSet = NSSet
 
 extension CustomerOrder {
 
+    // Builds a fetch request for this entity.
     @nonobjc public class func fetchRequest() -> NSFetchRequest<CustomerOrder> {
         return NSFetchRequest<CustomerOrder>(entityName: "CustomerOrder")
     }
 
+    // @NSManaged means Core Data supplies the storage. nonisolated lets code off the main actor read it.
     @NSManaged nonisolated public var id: Int64
     @NSManaged nonisolated public var firstName: String?
     @NSManaged nonisolated public var lastName: String?
@@ -32,6 +32,7 @@ extension CustomerOrder {
 
 }
 
+// Identifiable uses the id property so SwiftUI lists can track rows.
 extension CustomerOrder : Identifiable {
 
 }

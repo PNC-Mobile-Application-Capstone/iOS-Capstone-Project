@@ -1,8 +1,6 @@
 //
-//  ProductDetails.swift
+//  EmployeeDetailView.swift
 //  AdventureWorksMobile
-//
-//  Created by Tyler Swindell on 10/14/26.
 //
 
 
@@ -14,8 +12,6 @@ struct EmployeeDetails: View {
 
     var employee: EmployeeRow
     
-    // Photo bytes for this page. The repository handles caching and Core Data.
-//    @State private var photoData: Data?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
