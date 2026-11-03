@@ -9,25 +9,28 @@
 import SwiftUI
 
 /// The stock status icon.
-struct StockStatusIcon: View {
-    let level: StockLevel
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    var body: some View {
-        let status = level.status
-        let color = level.band.color
-
-        Image(systemName: status.systemImage)
-            .font(.title3)
-            .foregroundStyle(color)
-            // Glow when urgent, and pulse when critical unless Reduce Motion is on.
-            .shadow(color: status.isUrgent ? color.opacity(0.8) : .clear,
-                    radius: status.isUrgent ? 6 : 0)
-            .symbolEffect(.pulse, isActive: status.pulses && !reduceMotion)
-            .frame(minWidth: 28)
-            .accessibilityHidden(true)
-    }
-}
+//struct StockStatusIcon: View {
+//    let level: StockLevel
+//    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+//    @State var isVisible = false
+//
+//    var body: some View {
+//        let status = level.status
+//        let color = level.band.color
+//
+//        Image(systemName: status.systemImage)
+//            .font(.title3)
+//            .foregroundStyle(color)
+//            // Glow when urgent, and pulse when critical unless Reduce Motion is on.
+//            .shadow(color: status.isUrgent ? color.opacity(0.8) : .clear,
+//                    radius: status.isUrgent ? 6 : 0)
+//            .symbolEffect(.pulse.wholeSymbol, isActive: isVisible && status.pulses && !reduceMotion)
+//            .frame(minWidth: 28)
+//            .accessibilityHidden(true)
+//            .onAppear { isVisible = true }
+//            .onDisappear() { isVisible = false }
+//    }
+//}
 
 // Maps each band to a SwiftUI color, so the model doesn't need SwiftUI.
 extension StockLevel.Band {

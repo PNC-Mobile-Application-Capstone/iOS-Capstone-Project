@@ -14,35 +14,37 @@ struct EmployeeDetails: View {
     
 
     var body: some View {
-        // ScrollView keeps the content at the top and lets long pages scroll.
-        ScrollView {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(employee.displayName)
-                    .font(.default)
-                    .padding(5)
+        VStack(alignment: .leading, spacing: 8) {
+            Text("\(employee.firstName) \(employee.lastName)")
+                .font(.largeTitle)
+                .fontWeight(.bold)
+                .padding(5)
 
-                Text(employee.jobTitle)
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
+            Text(employee.jobTitle)
+                .font(.title)
+                .padding(5)
 
-                Text(employee.department)
-                    .padding(5)
-                
-                Text(employee.hireDate ?? "ERROR")
-                    .padding(5)
-                
-                
-                // Only show the shift when the API sent one.
-                if let shift = employee.shift { Text(shift).padding(5) }
-                
+            Text("\(employee.shift != nil ? "\(employee.shift!) shift in the" : "") \(employee.department) Department")
+                .padding(5)
+            
+            HStack {
+                Text("Hired on")
+                DateText(date: employee.hireDate)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding()
+                .padding(5)
+            
+            Text("Employee ID: \(employee.id)")
+                .padding(5)
+            
+            Spacer()
         }
-        .navigationTitle(employee.displayName)
-        .navigationBarTitleDisplayMode(.inline)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
     }
 
 }
 
-#Preview { EmployeeList() }
+
+#Preview {
+    EmployeeList()
+}
