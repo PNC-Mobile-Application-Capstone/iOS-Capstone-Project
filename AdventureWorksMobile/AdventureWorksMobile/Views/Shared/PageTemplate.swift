@@ -20,11 +20,13 @@ struct PageTemplate<Controls: View, Content: View>: View {
     let errorMessage: String
     let listStyle: PageListStyle
     let showsScrollToTop: Bool
+    let showsAccountButton: Bool
     let onRefresh: (() async -> Void)?
     let controls: Controls
     let content: Content
 
     @Environment(\.defaultMinListRowHeight) private var defaultMinRowHeight
+    @State private var showsAccount = false
 
     /// - Parameters:
     ///   - controls: Search, sort, or other rows that sit under the title and scroll away.
@@ -33,6 +35,7 @@ struct PageTemplate<Controls: View, Content: View>: View {
          errorMessage: String = "",
          listStyle: PageListStyle = .standard,
          showsScrollToTop: Bool = true,
+         showsAccountButton: Bool = true,
          onRefresh: (() async -> Void)? = nil,
          @ViewBuilder controls: () -> Controls,
          @ViewBuilder content: () -> Content) {
@@ -40,6 +43,7 @@ struct PageTemplate<Controls: View, Content: View>: View {
         self.errorMessage = errorMessage
         self.listStyle = listStyle
         self.showsScrollToTop = showsScrollToTop
+        self.showsAccountButton = showsAccountButton
         self.onRefresh = onRefresh
         self.controls = controls()
         self.content = content()
@@ -56,6 +60,22 @@ struct PageTemplate<Controls: View, Content: View>: View {
                 // The system large title shrinks into the nav bar on scroll.
                 .navigationTitle(title)
                 .toolbarTitleDisplayMode(.inlineLarge)
+                .toolbar {
+                    if showsAccountButton {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button {
+                                showsAccount = true
+                            } label: {
+                                Label("Account", systemImage: "person.crop.circle")
+                            }
+                            .accessibilityIdentifier("accountButton")
+                        }
+                    }
+                }
+                .sheet(isPresented: $showsAccount) {
+                    AccountView()
+                        .accessibilityIdentifier("accountView")
+                }
         }
     }
 
@@ -93,12 +113,14 @@ extension PageTemplate where Controls == EmptyView {
          errorMessage: String = "",
          listStyle: PageListStyle = .standard,
          showsScrollToTop: Bool = true,
+         showsAccountButton: Bool = true,
          onRefresh: (() async -> Void)? = nil,
          @ViewBuilder content: () -> Content) {
         self.init(title,
                   errorMessage: errorMessage,
                   listStyle: listStyle,
                   showsScrollToTop: showsScrollToTop,
+                  showsAccountButton: showsAccountButton,
                   onRefresh: onRefresh,
                   controls: { EmptyView() },
                   content: content)

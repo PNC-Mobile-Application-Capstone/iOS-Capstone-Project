@@ -10,6 +10,9 @@ struct ContentView: View {
     
     var body: some View {
         // One tab per screen. Each screen loads its own data.
+        // Keep this at 5 tabs. On iPhone a 6th tab sends the last ones under "More",
+        // which has its own nav bar and doubles the back button.
+        // Account opens from the button at the top right of each page instead.
         TabView {
             // The dashboard gets its repository here instead of from the environment.
             DashboardView(repository: RemoteDashboardRepository(authStatus: authStatus))
@@ -31,10 +34,6 @@ struct ContentView: View {
             EmployeeList()
                 .accessibilityIdentifier("employeeListView")
                 .tabItem { Label("Employees", systemImage: "person.3.fill") }
-            
-            AccountView()
-                .accessibilityIdentifier("accountView")
-                .tabItem { Label("Account", systemImage: "person.crop.circle")}
         }
     }
 }
