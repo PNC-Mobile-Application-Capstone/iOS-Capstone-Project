@@ -16,7 +16,7 @@ struct DashboardView: View {
     }
     
     var body: some View {
-        PageTemplate("Dashboard") {
+        PageTemplate("Dashboard", onRefresh: { await viewModel.loadData() }) {
             Section("Overview") {
                 statGrid
                     .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
@@ -34,7 +34,8 @@ struct DashboardView: View {
                                     .init(
                                         label: entry.salesDate.formatted(.dateTime.weekday(.abbreviated)),
                                         value: entry.totalSales,
-                                        valueLabel: "$\(entry.totalSales.formatted(.number.notation(.compactName).precision(.fractionLength(1))))"
+                                        valueLabel: "$\(entry.totalSales.formatted(.number.notation(.compactName).precision(.fractionLength(1))))",
+                                        accessibilityText: "\(entry.salesDate.formatted(.dateTime.weekday(.wide))), \(entry.totalSales.formatted(.currency(code: "USD").precision(.fractionLength(0))))"
                                     )
                             })
                         Label(showsDailySales ? "Hide List" : "Show List",
@@ -45,6 +46,7 @@ struct DashboardView: View {
                 }
                 .buttonStyle(.plain)
                 .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                .accessibilityLabel(viewModel.weeklySalesSummary)
                 .accessibilityHint(showsDailySales ? "Hides the daily sales list" : "Shows the daily sales list")
                 
                 if showsDailySales {
@@ -161,12 +163,31 @@ extension DashboardView {
             lastWeekSales.reduce(0) { $0 + $1.totalProfit }
         }
         
-        // Best seller. prefix(1) keeps only the first item.
+        var weeklySalesSummary: String {
+            guard let best = lastWeekSales.max(by: { $0.totalSales < $1.totalSales }),
+                  let worst = lastWeekSales.min(by: { $0.totalSales < $1.totalSales }) else {
+                return "Weekly sales chart. No sales data."
+            }
+            return "Weekly sales chart. Total \(dollars(totalSales)). "
+                + "Highest \(weekday(best)), \(dollars(best.totalSales)). "
+                + "Lowest \(weekday(worst)), \(dollars(worst.totalSales))."
+        }
+        
+        private func dollars(_ amount: Double) -> String {
+            amount.formatted(.currency(code: "USD").precision(.fractionLength(0)))
+        }
+
+        private func weekday(_ entry: WeeklySalesEntry) -> String {
+            entry.salesDate.formatted(.dateTime.weekday(.wide))
+        }
+        
+        
+        // Best seller
         var topSellers: [ProductPerformanceEntry] {
             Array(productPerformance.sorted { $0.unitsSold > $1.unitsSold }.prefix(1))
         }
         
-        // Worst seller.
+        // Worst seller
         var underperformers: [ProductPerformanceEntry] {
             Array(productPerformance.sorted { $0.unitsSold < $1.unitsSold }.prefix(1))
         }

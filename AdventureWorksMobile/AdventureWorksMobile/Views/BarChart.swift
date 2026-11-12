@@ -14,6 +14,8 @@ struct BarChart: View {
         let value: Double
         var valueLabel: String? = nil
         
+        var accessibilityText: String?
+        
         var id: String { label }
     }
     
@@ -53,6 +55,8 @@ struct BarChart: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(entry.accessibilityText ?? "\(entry.label), \(entry.valueLabel ?? entry.value.formatted())")
             }
         }
     }
