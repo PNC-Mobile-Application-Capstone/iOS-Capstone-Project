@@ -508,6 +508,65 @@ struct AdventureWorksMobileTests {
         #expect(!model.hasActiveCriteria)
         #expect(model.locations.all.flatMap(\.lines).count == 5)
     }
+    
+    @Test
+    func dashboardHasNoErrorWhenEverythingLoads() async {
+        let model = DashboardView.ViewModel(repository: DashboardRepositoryStub())
+        
+        await model.loadData()
+        
+        #expect(model.errorMessage.isEmpty)
+        #expect(model.weeklySales.count == 7)
+        #expect(model.shifts.count == 5)
+    }
+    
+    @Test
+    func dashboardShowsErrorWhenOneSectionFails() async {
+        let repository = DashboardRepositoryStub()
+        repository.failing = [.lowStock]
+        let model = DashboardView.ViewModel(repository: repository)
+        
+        await model.loadData()
+        
+        #expect(!model.errorMessage.isEmpty)
+        // check if others still load
+        #expect(model.lowStock.isEmpty)
+        #expect(model.weeklySales.count == 7)
+        #expect(model.shifts.count == 5)
+    }
+    
+    @Test
+    func dashboardErrorClearsAfterSuccessfulReload() async {
+        let repository = DashboardRepositoryStub()
+        repository.failing = [.shifts]
+        let model = DashboardView.ViewModel(repository: repository)
+        
+        await model.loadData()
+        #expect(!model.errorMessage.isEmpty)
+        
+        // network works now, error should clear on refresh
+        repository.failing = []
+        await model.loadData()
+        
+        #expect(model.errorMessage.isEmpty)
+        #expect(model.shifts.count == 5)
+    }
+    
+    @Test
+    func failedDashboardRefreshKeepsPreviousData() async {
+        let repository = DashboardRepositoryStub()
+        let model = DashboardView.ViewModel(repository: repository)
+        await model.loadData()
+        
+        // fail everything
+        repository.failing = [.weeklySales, .productPerformance, .lowStock, .shifts]
+        await model.loadData()
+        
+        // data from first load shold still show
+        #expect(model.weeklySales.count == 7)
+        #expect(model.lowStock.count == 3)
+        #expect(model.shifts.count == 5)
+    }
 
     // A URLSession that sends every request to URLProtocolStub instead of the network.
     private static func stubbedSession() -> URLSession {
@@ -568,6 +627,37 @@ private final class InMemoryTokenStore: TokenStoring {
 
     func deleteToken(key: String) {
         values.removeValue(forKey: key)
+    }
+}
+
+// Dashboard repository with mock data so that any endpoint can be set to fail
+private final class DashboardRepositoryStub: DashboardRepository {
+    enum Endpoint {
+        case weeklySales, productPerformance, lowStock, shifts
+    }
+    
+    // Endpoints in this set throw instead of returning data
+    var failing: Set<Endpoint> = []
+    private let mock = MockDashboardRepository()
+    
+    func getWeeklySales() async throws -> [WeeklySalesEntry] {
+        if failing.contains(.weeklySales) { throw NetworkError.noConnection }
+        return try await mock.getWeeklySales()
+    }
+    
+    func getProductPerformance() async throws -> [ProductPerformanceEntry] {
+        if failing.contains(.productPerformance) { throw NetworkError.noConnection }
+        return try await mock.getProductPerformance()
+    }
+    
+    func getLowStock() async throws -> [LowStockEntry] {
+        if failing.contains(.lowStock) { throw NetworkError.noConnection }
+        return try await mock.getLowStock()
+    }
+    
+    func getShifts() async throws -> [ShiftEntry] {
+        if failing.contains(.shifts) { throw NetworkError.noConnection }
+        return try await mock.getShifts()
     }
 }
 

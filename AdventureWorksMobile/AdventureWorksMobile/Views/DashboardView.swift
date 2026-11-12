@@ -16,7 +16,9 @@ struct DashboardView: View {
     }
     
     var body: some View {
-        PageTemplate("Dashboard", onRefresh: { await viewModel.loadData() }) {
+        PageTemplate("Dashboard",
+                     errorMessage: viewModel.errorMessage,
+                     onRefresh: { await viewModel.loadData() }) {
             Section("Overview") {
                 statGrid
                     .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
@@ -61,7 +63,7 @@ struct DashboardView: View {
                 }
             }
             
-            Section("Top Sellers") {
+            Section("Top Seller") {
                 ForEach(viewModel.topSellers) { product in
                     HStack {
                         Text(product.productName)
@@ -139,6 +141,7 @@ extension DashboardView {
         var productPerformance: [ProductPerformanceEntry] = []
         var lowStock: [LowStockEntry] = []
         var shifts: [ShiftEntry] = []
+        var errorMessage = ""
         
         init(repository: any DashboardRepository) {
             self.repository = repository
@@ -192,6 +195,10 @@ extension DashboardView {
             Array(productPerformance.sorted { $0.unitsSold < $1.unitsSold }.prefix(1))
         }
         
+        private func isCancelled(_ error: Error) -> Bool {
+            error is CancellationError || (error as? URLError)?.code == .cancelled
+        }
+        
         func loadData() async {
             // async let starts all four calls at once. Each await then waits for its result.
             async let sales = repository.getWeeklySales()
@@ -199,18 +206,34 @@ extension DashboardView {
             async let stock = repository.getLowStock()
             async let staffShifts = repository.getShifts()
             
-            // A failed call only leaves its own section empty.
+            // A failed call only leaves its own section empty, note it for the error message
+            var failed = false
+            
             do { weeklySales = try await sales }
-            catch { print("weekly-sales failed: \(error)") }
+            catch {
+                print("weekly-sales failed: \(error)")
+                if !isCancelled(error) { failed = true }
+            }
             
             do { productPerformance = try await performance }
-            catch { print("best-worst failed: \(error)") }
+            catch {
+                print("best-worst failed: \(error)")
+                if !isCancelled(error) { failed = true }
+            }
             
             do { lowStock = try await stock }
-            catch { print("low-stock failed: \(error)") }
+            catch {
+                print("low-stock failed: \(error)")
+                if !isCancelled(error) { failed = true }
+            }
             
             do { shifts = try await staffShifts }
-            catch { print("shifts failed: \(error)") }
+            catch {
+                print("shifts failed: \(error)")
+                if !isCancelled(error) { failed = true }
+            }
+            
+            errorMessage = failed ? "Some dashboard data didn't load. Pull down to try again." : ""
         }
         
     }
