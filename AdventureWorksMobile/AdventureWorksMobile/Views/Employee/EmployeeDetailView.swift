@@ -11,8 +11,8 @@ import SwiftUI
 /// id, firstName, lastName, jobTitle, department, shift, hireDate.
 struct EmployeeDetails: View {
 
-    // Not used yet. Kept for a later call to GET /api/Employee/{id} (employment history).
     @Environment(\.employeeRepository) private var repository
+    @State private var viewModel = ViewModel()
 
     var employee: EmployeeRow
 
@@ -36,6 +36,10 @@ struct EmployeeDetails: View {
                 LabeledContent("Hire Date") { DateText(date: employee.hireDate) }
                 LabeledContent("Time at Company", value: employee.timeAtCompany)
             }
+            
+            Section("Employment History") {
+                historyRows
+            }
 
             Section("Personal") {
                 LabeledContent("First Name", value: employee.firstName.orPlaceholder)
@@ -43,6 +47,10 @@ struct EmployeeDetails: View {
                 // Wrap in String so the ID shows without a comma.
                 LabeledContent("Employee ID", value: String(employee.id))
             }
+            .navigationTitle(String("Employee #\(employee.id)"))
+            .navigationBarTitleDisplayMode(.inline)
+            .refreshable { await viewModel.loadHistory(for: employee.id, repository: repository) }
+            .task { await viewModel.loadHistory(for: employee.id, repository: repository) }
         }
         // Wrap in String so the ID shows without a comma.
         .navigationTitle(String("Employee #\(employee.id)"))
@@ -84,6 +92,101 @@ struct EmployeeDetails: View {
             StatBlock(label: "Hired", value: DateText.displayDate(employee.hireDate))
             StatBlock(label: "Tenure", value: employee.timeAtCompany)
         }
+    }
+    
+    @ViewBuilder
+    private var historyRows: some View {
+        if viewModel.isLoading && !viewModel.hasLoaded {
+            HStack(spacing: 8) {
+                ProgressView()
+                Text("Loading history...")
+                    .foregroundStyle(.secondary)
+            }
+        }
+        
+        if !viewModel.errorMessage.isEmpty {
+            Text("\(viewModel.errorMessage) Pull down to try again.")
+                .font(.subheadline)
+                .foregroundStyle(.red)
+        }
+        
+        if viewModel.hasLoaded && viewModel.history.isEmpty {
+            Text("No employment history on file.")
+                .foregroundStyle(.secondary)
+        }
+        
+        ForEach(viewModel.history) { entry in
+            EmploymentHistoryRow(entry: entry)
+        }
+    }
+}
+
+// MARK: - ViewModel
+
+extension EmployeeDetails {
+    
+    @MainActor
+    @Observable
+    class ViewModel {
+        var history: [EmploymentHistoryEntry] = []
+        var isLoading = false
+        var hasLoaded = false
+        var errorMessage = ""
+        
+        func loadHistory(for employeeId: Int64,
+                         repository: (any TieredCacheRepositoryProtocol<Employee>)?) async {
+            guard let repo = repository as? TieredCacheRepositoryBase<Employee> else { return }
+            
+            isLoading = true
+            defer { isLoading = false }
+            
+            do {
+                let detail = try await repo.loadDetail(for: employeeId)
+                setHistory(detail.sortedHistory)
+            }
+            catch is CancellationError {  }
+            catch let e as URLError where e.code == .cancelled {  }
+            catch {
+                errorMessage = error.localizedDescription
+            }
+        }
+        
+        func setHistory(_ entries: [EmploymentHistoryEntry]) {
+            history = entries
+            hasLoaded = true
+            errorMessage = ""
+        }
+    }
+}
+
+private struct EmploymentHistoryRow: View {
+    let entry: EmploymentHistoryEntry
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(entry.departmentText)
+                Spacer()
+                if entry.isCurrent {
+                    Label {
+                        Text("Current")
+                    } icon: {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                    }
+                    .font(.caption.weight(.semibold))
+                }
+            }
+            Text(entry.groupAndShiftText)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            Text(entry.dateRangeText)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 2)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(entry.accessibilitySummary)
     }
 }
 
