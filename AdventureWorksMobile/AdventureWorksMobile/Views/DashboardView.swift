@@ -111,9 +111,9 @@ struct DashboardView: View {
                 }
             }
         }
-        .task {
-            await viewModel.loadData()
-        }
+                     .task {
+                         await viewModel.loadData()
+                     }
     }
     
     
@@ -133,6 +133,8 @@ extension DashboardView {
     
     // @Observable redraws a view only when a property it reads changes.
     @Observable
+    
+    // MARK: - ViewModel
     class ViewModel {
         
         private var repository: any DashboardRepository
@@ -142,6 +144,7 @@ extension DashboardView {
         var lowStock: [LowStockEntry] = []
         var shifts: [ShiftEntry] = []
         var errorMessage = ""
+        private var hasShownSaved = false
         
         init(repository: any DashboardRepository) {
             self.repository = repository
@@ -172,14 +175,14 @@ extension DashboardView {
                 return "Weekly sales chart. No sales data."
             }
             return "Weekly sales chart. Total \(dollars(totalSales)). "
-                + "Highest \(weekday(best)), \(dollars(best.totalSales)). "
-                + "Lowest \(weekday(worst)), \(dollars(worst.totalSales))."
+            + "Highest \(weekday(best)), \(dollars(best.totalSales)). "
+            + "Lowest \(weekday(worst)), \(dollars(worst.totalSales))."
         }
         
         private func dollars(_ amount: Double) -> String {
             amount.formatted(.currency(code: "USD").precision(.fractionLength(0)))
         }
-
+        
         private func weekday(_ entry: WeeklySalesEntry) -> String {
             entry.salesDate.formatted(.dateTime.weekday(.wide))
         }
@@ -200,44 +203,53 @@ extension DashboardView {
         }
         
         func loadData() async {
-            // async let starts all four calls at once. Each await then waits for its result.
-            async let sales = repository.getWeeklySales()
-            async let performance = repository.getProductPerformance()
-            async let stock = repository.getLowStock()
-            async let staffShifts = repository.getShifts()
-            
-            // A failed call only leaves its own section empty, note it for the error message
-            var failed = false
-            
-            do { weeklySales = try await sales }
-            catch {
-                print("weekly-sales failed: \(error)")
-                if !isCancelled(error) { failed = true }
+            // 1. Show the last saved dashboard right away, so the screen isn't empty.
+            if !hasShownSaved {
+                hasShownSaved = true
+                if let saved = repository.loadSaved() {
+                    weeklySales = saved.weeklySales
+                    productPerformance = saved.productPerformance
+                    lowStock = saved.lowStock
+                    shifts = saved.shifts
+                }
             }
             
-            do { productPerformance = try await performance }
-            catch {
-                print("best-worst failed: \(error)")
-                if !isCancelled(error) { failed = true }
+            // 2. Ask the API for all four at once. Each section updates as soon as its own answer arrives.
+            let allUpdated = await withTaskGroup(of: Bool.self) { group -> Bool in
+                group.addTask { await self.refreshWeeklySales() }
+                group.addTask { await self.refreshProductPerformance() }
+                group.addTask { await self.refreshLowStock() }
+                group.addTask { await self.refreshShifts() }
+                
+                var all = true
+                for await updated in group where !updated { all = false }
+                return all
             }
             
-            do { lowStock = try await stock }
-            catch {
-                print("low-stock failed: \(error)")
-                if !isCancelled(error) { failed = true }
-            }
-            
-            do { shifts = try await staffShifts }
-            catch {
-                print("shifts failed: \(error)")
-                if !isCancelled(error) { failed = true }
-            }
-            
-            errorMessage = failed ? "Some dashboard data didn't load. Pull down to try again." : ""
+            errorMessage = allUpdated ? "" : "Some dashboard data couldn't be updated. Pull down to try again."
         }
         
+        // Each one replaces its section only when the API answers. On failure the saved data stays.
+        private func refreshWeeklySales() async -> Bool {
+            do { weeklySales = try await repository.getWeeklySales(); return true }
+            catch { print("weekly-sales failed: \(error)"); return isCancelled(error) }
+        }
+        
+        private func refreshProductPerformance() async -> Bool {
+            do { productPerformance = try await repository.getProductPerformance(); return true }
+            catch { print("best-worst failed: \(error)"); return isCancelled(error) }
+        }
+        
+        private func refreshLowStock() async -> Bool {
+            do { lowStock = try await repository.getLowStock(); return true }
+            catch { print("low-stock failed: \(error)"); return isCancelled(error) }
+        }
+        
+        private func refreshShifts() async -> Bool {
+            do { shifts = try await repository.getShifts(); return true }
+            catch { print("shifts failed: \(error)"); return isCancelled(error) }
+        }
     }
-    
 }
 
 

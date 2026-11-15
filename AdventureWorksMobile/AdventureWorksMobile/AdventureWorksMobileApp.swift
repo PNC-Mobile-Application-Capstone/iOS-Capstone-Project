@@ -18,6 +18,7 @@ struct AdventureWorksMobileApp: App {
     private let customerOrderRepository: TieredCacheRepositoryBase<CustomerOrder>
     private let inventoryRepository: TieredCacheRepositoryBase<Inventory>
     private let employeeRepository: TieredCacheRepositoryBase<Employee>
+    private let dashboardRepository: CoreDataDashboardRepository
 
     init() {
         let authStatus = AuthStatus()
@@ -53,6 +54,11 @@ struct AdventureWorksMobileApp: App {
             urlBase: APIEndpoint.employees.urlString,
             context: persistenceController.container.viewContext
         )
+        // GET /api/Dashboard/*
+        self.dashboardRepository = CoreDataDashboardRepository(
+            authStatus: authStatus,
+            container: persistenceController.container
+        )
     }
 
     var body: some Scene {
@@ -67,6 +73,7 @@ struct AdventureWorksMobileApp: App {
                     .environment(\.customerOrderRepository, customerOrderRepository)
                     .environment(\.inventoryRepository, inventoryRepository)
                     .environment(\.employeeRepository, employeeRepository)
+                    .environment(\.dashboardRepository, dashboardRepository)
                 // environmentObject() hands AuthStatus to @EnvironmentObject properties by type.
                     .environmentObject(authStatus)
             }
