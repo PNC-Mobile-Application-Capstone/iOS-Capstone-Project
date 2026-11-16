@@ -13,8 +13,15 @@ struct EmployeeDetails: View {
 
     @Environment(\.employeeRepository) private var repository
     @State private var viewModel = ViewModel()
-
+    
     var employee: EmployeeRow
+    
+    private var jobTitle: String {
+        employee.jobTitle.isEmpty ? viewModel.jobTitle : employee.jobTitle
+    }
+    private var department: String {
+        employee.department.isEmpty ? viewModel.department : employee.department
+    }
 
     var body: some View {
         List {
@@ -30,8 +37,8 @@ struct EmployeeDetails: View {
             }
 
             Section("Employment") {
-                LabeledContent("Job Title", value: employee.jobTitle.orPlaceholder)
-                LabeledContent("Department", value: employee.department.orPlaceholder)
+                LabeledContent("Job Title", value: jobTitle.orPlaceholder)
+                LabeledContent("Department", value: department.orPlaceholder)
                 LabeledContent("Shift", value: employee.shiftName)
                 LabeledContent("Hire Date") { DateText(date: employee.hireDate) }
                 LabeledContent("Time at Company", value: employee.timeAtCompany)
@@ -66,7 +73,7 @@ struct EmployeeDetails: View {
                 .scaledToFit()
                 .frame(height: 96)
                 .foregroundStyle(.secondary)
-                // Decorative. The name below says who this is.
+            // Decorative. The name below says who this is.
                 .accessibilityHidden(true)
 
             Text(employee.displayName)
@@ -75,7 +82,7 @@ struct EmployeeDetails: View {
                 .multilineTextAlignment(.center)
                 .accessibilityAddTraits(.isHeader)
 
-            Text(employee.jobTitle.orPlaceholder)
+            Text(jobTitle.orPlaceholder)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -87,7 +94,7 @@ struct EmployeeDetails: View {
 
     private var overviewGrid: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-            StatBlock(label: "Department", value: employee.department.orPlaceholder)
+            StatBlock(label: "Department", value: department.orPlaceholder)
             StatBlock(label: "Shift", value: employee.shiftName)
             StatBlock(label: "Hired", value: DateText.displayDate(employee.hireDate))
             StatBlock(label: "Tenure", value: employee.timeAtCompany)
@@ -132,6 +139,8 @@ extension EmployeeDetails {
         var isLoading = false
         var hasLoaded = false
         var errorMessage = ""
+        var jobTitle = ""
+        var department = ""
         
         func loadHistory(for employeeId: Int64,
                          repository: (any TieredCacheRepositoryProtocol<Employee>)?) async {
@@ -143,6 +152,8 @@ extension EmployeeDetails {
             do {
                 let detail = try await repo.loadDetail(for: employeeId)
                 setHistory(detail.sortedHistory)
+                jobTitle = detail.jobTitle ?? ""
+                department = detail.sortedHistory.first(where: { $0.isCurrent })?.departmentName ?? ""
             }
             catch is CancellationError {  }
             catch let e as URLError where e.code == .cancelled {  }

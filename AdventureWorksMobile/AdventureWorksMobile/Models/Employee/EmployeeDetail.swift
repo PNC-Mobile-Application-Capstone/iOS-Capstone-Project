@@ -7,6 +7,7 @@ import Foundation
 
 struct EmployeeDetail: Decodable {
     let employeeId: Int64
+    let jobTitle: String?
     let shiftHistory: [EmploymentHistoryEntry]?
     
     var sortedHistory: [EmploymentHistoryEntry] {

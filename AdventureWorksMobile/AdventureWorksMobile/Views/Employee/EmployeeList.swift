@@ -128,6 +128,16 @@ struct EmployeeRow: Identifiable, Hashable {
         hireDate = e.hireDate
     }
     
+    init(shift entry: ShiftEntry) {
+        id = Int64(entry.employeeId)
+        firstName = entry.firstName
+        lastName = entry.lastName
+        department = ""
+        jobTitle = ""
+        shift = entry.shift
+        hireDate = nil
+    }
+    
     // First and last name, or a neutral placeholder when both are missing.
     var displayName: String {
         let name = [firstName, lastName].filter { !$0.isEmpty }.joined(separator: " ")
