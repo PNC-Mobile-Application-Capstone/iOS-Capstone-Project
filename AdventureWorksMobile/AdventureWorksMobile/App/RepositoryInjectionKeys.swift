@@ -26,3 +26,8 @@ struct InventoryRepositoryKey: EnvironmentKey {
 struct EmployeeRepositoryKey: EnvironmentKey {
     static let defaultValue: (any TieredCacheRepositoryProtocol<Employee>)? = nil
 }
+
+/// Environment key for the dashboard repository.
+struct DashboardRepositoryKey: EnvironmentKey {
+    static let defaultValue: (any DashboardRepository)? = nil
+}

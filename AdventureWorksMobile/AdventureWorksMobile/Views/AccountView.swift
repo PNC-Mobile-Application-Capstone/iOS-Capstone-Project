@@ -16,10 +16,14 @@ struct AccountView: View {
                 // Clears both tokens, which sends the app back to LoginView.
                 authStatus.logout()
             }
+            .accessibilityLabel("Log out")
+            .accessibilityHint("Signs out of your account and returns to the sign in screen")
             // Toolbar items set anywhere inside the page land in its nav bar.
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Done") { dismiss() }
+                        .accessibilityLabel("Done")
+                        .accessibilityHint("Closes account settings")
                 }
             }
         }

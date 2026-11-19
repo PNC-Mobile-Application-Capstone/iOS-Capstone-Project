@@ -14,10 +14,13 @@ struct BarChart: View {
         let value: Double
         var valueLabel: String? = nil
         
+        var accessibilityText: String?
+        
         var id: String { label }
     }
     
     let entries: [Entry]
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     
     var totalLevels = 50
     var heightPerLevel: Int = 12
@@ -33,16 +36,17 @@ struct BarChart: View {
     }
     
     var body: some View {
-        HStack(alignment: .bottom, spacing: 8) {
+        let isLarge = dynamicTypeSize.isAccessibilitySize
+        HStack(alignment: .bottom, spacing: isLarge ? 4 : 8) {
             ForEach(entries) { entry in
                 
                 VStack {
-                    if let valueLabel = entry.valueLabel {
+                    if let valueLabel = entry.valueLabel, !isLarge {
                         Text(valueLabel)
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
-                            .minimumScaleFactor(0.8)
+                            .minimumScaleFactor(0.7)
                     }
                     
                     RoundedRectangle(cornerRadius: 4)
@@ -52,7 +56,11 @@ struct BarChart: View {
                     Text(entry.label)
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
                 }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(entry.accessibilityText ?? "\(entry.label), \(entry.valueLabel ?? entry.value.formatted())")
             }
         }
     }

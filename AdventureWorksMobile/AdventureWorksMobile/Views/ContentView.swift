@@ -7,6 +7,7 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var authStatus: AuthStatus
+    @Environment(\.dashboardRepository) private var dashboardRepository
     
     var body: some View {
         // One tab per screen. Each screen loads its own data.
@@ -14,10 +15,11 @@ struct ContentView: View {
         // which has its own nav bar and doubles the back button.
         // Account opens from the button at the top right of each page instead.
         TabView {
-            // The dashboard gets its repository here instead of from the environment.
-            DashboardView(repository: RemoteDashboardRepository(authStatus: authStatus))
-                .accessibilityIdentifier("dashboardView")
-                .tabItem { Label("Dashboard", systemImage: "house.fill") }
+            if let dashboardRepository {
+                DashboardView(repository: dashboardRepository)
+                    .accessibilityIdentifier("dashboardView")
+                    .tabItem { Label("Dashboard", systemImage: "house.fill") }
+            }
             
             ProductList()
                 .accessibilityIdentifier("productView")
@@ -41,4 +43,5 @@ struct ContentView: View {
 #Preview {
     ContentView()
         .environmentObject(AuthStatus())
+        .environment(\.dashboardRepository, MockDashboardRepository())
 }

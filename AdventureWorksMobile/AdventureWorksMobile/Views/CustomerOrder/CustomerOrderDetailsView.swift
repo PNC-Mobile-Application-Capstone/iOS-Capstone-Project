@@ -19,10 +19,21 @@ struct CustomerOrderDetails: View {
         List {
             Section("Order Info") {
                 LabeledContent("Order Date") { DateText(date: order.orderDate) }
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("Order Date, \(DateText.spokenDate(order.orderDate))")
+
                 LabeledContent("Ship Date") { DateText(date: order.shipDate) }
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("Ship Date, \(DateText.spokenDate(order.shipDate))")
+
                 LabeledContent("Customer", value: order.customerName.isEmpty ? "--" : order.customerName)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("Customer, \(order.displayCustomerName)")
+
                 if let customerId = order.customerId {
                     LabeledContent("Customer ID", value: "\(customerId)")
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel("Customer ID, \(customerId)")
                 }
             }
 
@@ -43,11 +54,19 @@ struct CustomerOrderDetails: View {
 
             Section("Summary") {
                 LabeledContent("Products", value: "\(order.productCount)")
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("Products, \(order.productCount)")
+
                 LabeledContent("Total Units", value: "\(order.totalUnits)")
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("Total Units, \(order.totalUnits)")
+
                 LabeledContent("Order Total") {
                     Text(order.total, format: .currency(code: "USD"))
                         .fontWeight(.semibold)
                 }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Order Total, \(order.total.formatted(.currency(code: "USD")))")
             }
         }
         // Wrap in String so the order number shows without a comma.
@@ -73,18 +92,28 @@ struct CustomerOrderDetails: View {
 /// One product line inside an order.
 private struct OrderLineRow: View {
     let line: OrderLine
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
-        HStack {
+        let isLarge = dynamicTypeSize.isAccessibilitySize
+        let layout = isLarge
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4))
+            : AnyLayout(HStackLayout(alignment: .firstTextBaseline))
+
+        layout {
             VStack(alignment: .leading, spacing: 2) {
-                Text(line.productName ?? "--")
+                Text(line.displayProductName)
                 Text("\(line.orderQty) x \(line.unitPrice, format: .currency(code: "USD"))")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-            Spacer()
+            if !isLarge {
+                Spacer()
+            }
             Text(line.lineTotal, format: .currency(code: "USD"))
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(line.accessibilitySummary)
     }
 }
 

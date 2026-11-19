@@ -11,10 +11,18 @@ import SwiftUI
 /// id, firstName, lastName, jobTitle, department, shift, hireDate.
 struct EmployeeDetails: View {
 
-    // Not used yet. Kept for a later call to GET /api/Employee/{id} (employment history).
     @Environment(\.employeeRepository) private var repository
-
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @State private var viewModel = ViewModel()
+    
     var employee: EmployeeRow
+    
+    private var jobTitle: String {
+        employee.jobTitle.isEmpty ? viewModel.jobTitle : employee.jobTitle
+    }
+    private var department: String {
+        employee.department.isEmpty ? viewModel.department : employee.department
+    }
 
     var body: some View {
         List {
@@ -30,26 +38,46 @@ struct EmployeeDetails: View {
             }
 
             Section("Employment") {
-                LabeledContent("Job Title", value: employee.jobTitle.orPlaceholder)
-                LabeledContent("Department", value: employee.department.orPlaceholder)
-                LabeledContent("Shift", value: employee.shiftName)
+                infoRow("Job Title", value: jobTitle.orPlaceholder)
+                infoRow("Department", value: department.orPlaceholder)
+                infoRow("Shift", value: employee.shiftName)
                 LabeledContent("Hire Date") { DateText(date: employee.hireDate) }
-                LabeledContent("Time at Company", value: employee.timeAtCompany)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("Hire Date, \(DateText.spokenDate(employee.hireDate))")
+                infoRow("Time at Company", value: employee.timeAtCompany)
+            }
+            
+            Section("Employment History") {
+                historyRows
             }
 
             Section("Personal") {
-                LabeledContent("First Name", value: employee.firstName.orPlaceholder)
-                LabeledContent("Last Name", value: employee.lastName.orPlaceholder)
+                infoRow("First Name", value: employee.firstName.orPlaceholder)
+                infoRow("Last Name", value: employee.lastName.orPlaceholder)
                 // Wrap in String so the ID shows without a comma.
-                LabeledContent("Employee ID", value: String(employee.id))
+                infoRow("Employee ID", value: String(employee.id))
             }
         }
         // Wrap in String so the ID shows without a comma.
         .navigationTitle(String("Employee #\(employee.id)"))
         .navigationBarTitleDisplayMode(.inline)
+        .refreshable { await viewModel.loadHistory(for: employee.id, repository: repository) }
+        .task { await viewModel.loadHistory(for: employee.id, repository: repository) }
     }
 
     // MARK: - Build components
+
+    private func infoRow(_ label: String, value: String) -> some View {
+        let spoken = (value == "--" || value == "—" || value.isEmpty) ? "Not listed" : value
+        return LabeledContent(label, value: value)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("\(label), \(spoken)")
+    }
+
+    private var headerAccessibilityLabel: String {
+        let title = jobTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        return title.isEmpty ? employee.displayName : "\(employee.displayName), \(title)"
+    }
 
     private var header: some View {
         VStack(spacing: 8) {
@@ -58,32 +86,147 @@ struct EmployeeDetails: View {
                 .scaledToFit()
                 .frame(height: 96)
                 .foregroundStyle(.secondary)
-                // Decorative. The name below says who this is.
+            // Decorative. The name below says who this is.
                 .accessibilityHidden(true)
 
             Text(employee.displayName)
                 .font(.title2)
                 .fontWeight(.bold)
                 .multilineTextAlignment(.center)
-                .accessibilityAddTraits(.isHeader)
 
-            Text(employee.jobTitle.orPlaceholder)
+            Text(jobTitle.orPlaceholder)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
         // VoiceOver reads the name and title as one item.
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(headerAccessibilityLabel)
+        .accessibilityAddTraits(.isHeader)
+    }
+
+    private var gridColumns: [GridItem] {
+        let count = dynamicTypeSize.isAccessibilitySize ? 1 : 2
+        return Array(repeating: GridItem(.flexible()), count: count)
     }
 
     private var overviewGrid: some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-            StatBlock(label: "Department", value: employee.department.orPlaceholder)
+        LazyVGrid(columns: gridColumns, spacing: 12) {
+            StatBlock(label: "Department", value: department.orPlaceholder)
             StatBlock(label: "Shift", value: employee.shiftName)
             StatBlock(label: "Hired", value: DateText.displayDate(employee.hireDate))
             StatBlock(label: "Tenure", value: employee.timeAtCompany)
         }
+    }
+    
+    @ViewBuilder
+    private var historyRows: some View {
+        if viewModel.isLoading && !viewModel.hasLoaded {
+            HStack(spacing: 8) {
+                ProgressView()
+                Text("Loading history...")
+                    .foregroundStyle(.secondary)
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Loading employment history")
+        }
+        
+        if !viewModel.errorMessage.isEmpty {
+            Text("\(viewModel.errorMessage) Pull down to try again.")
+                .font(.subheadline)
+                .foregroundStyle(.red)
+        }
+        
+        if viewModel.hasLoaded && viewModel.history.isEmpty {
+            Text("No employment history on file.")
+                .foregroundStyle(.secondary)
+        }
+        
+        ForEach(viewModel.history) { entry in
+            EmploymentHistoryRow(entry: entry)
+        }
+    }
+}
+
+// MARK: - ViewModel
+
+extension EmployeeDetails {
+    
+    @MainActor
+    @Observable
+    class ViewModel {
+        var history: [EmploymentHistoryEntry] = []
+        var isLoading = false
+        var hasLoaded = false
+        var errorMessage = ""
+        var jobTitle = ""
+        var department = ""
+        
+        func loadHistory(for employeeId: Int64,
+                         repository: (any TieredCacheRepositoryProtocol<Employee>)?) async {
+            guard let repo = repository as? TieredCacheRepositoryBase<Employee> else { return }
+            
+            isLoading = true
+            defer { isLoading = false }
+            
+            do {
+                let detail = try await repo.loadDetail(for: employeeId)
+                setHistory(detail.sortedHistory)
+                jobTitle = detail.jobTitle ?? ""
+                department = detail.sortedHistory.first(where: { $0.isCurrent })?.departmentName ?? ""
+            }
+            catch is CancellationError {  }
+            catch let e as URLError where e.code == .cancelled {  }
+            catch {
+                errorMessage = error.localizedDescription
+            }
+        }
+        
+        func setHistory(_ entries: [EmploymentHistoryEntry]) {
+            history = entries
+            hasLoaded = true
+            errorMessage = ""
+        }
+    }
+}
+
+private struct EmploymentHistoryRow: View {
+    let entry: EmploymentHistoryEntry
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    
+    var body: some View {
+        let isLarge = dynamicTypeSize.isAccessibilitySize
+        let topLayout = isLarge
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 2))
+            : AnyLayout(HStackLayout(alignment: .firstTextBaseline))
+
+        VStack(alignment: .leading, spacing: 2) {
+            topLayout {
+                Text(entry.departmentText)
+                if !isLarge {
+                    Spacer()
+                }
+                if entry.isCurrent {
+                    Label {
+                        Text("Current")
+                    } icon: {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                    }
+                    .font(.caption.weight(.semibold))
+                }
+            }
+            Text(entry.groupAndShiftText)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            Text(entry.dateRangeText)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 2)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(entry.accessibilitySummary)
     }
 }
 

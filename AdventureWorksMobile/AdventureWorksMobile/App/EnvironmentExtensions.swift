@@ -29,4 +29,9 @@ extension EnvironmentValues {
         get { self[EmployeeRepositoryKey.self] }
         set { self[EmployeeRepositoryKey.self] = newValue }
     }
+    
+    var dashboardRepository: (any DashboardRepository)? {
+        get { self[DashboardRepositoryKey.self] }
+        set { self[DashboardRepositoryKey.self] = newValue }
+    }
 }
