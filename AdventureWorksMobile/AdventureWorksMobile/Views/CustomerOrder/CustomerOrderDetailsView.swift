@@ -14,6 +14,10 @@ struct CustomerOrderDetails: View {
 
     /// Products keyed by name, since order lines only carry the product name.
     @State private var productsByName: [String: Product] = [:]
+    @State private var isLoadingProducts = false
+    @State private var productLoadWaiters: [CheckedContinuation<Void, Never>] = []
+    @State private var hasLoadedProducts = false
+    @State private var productLookupError = ""
 
     var body: some View {
         List {
@@ -27,6 +31,17 @@ struct CustomerOrderDetails: View {
             }
 
             Section("Products") {
+                if isLoadingProducts {
+                    ProgressView("Loading product links…")
+                }
+                if !productLookupError.isEmpty {
+                    Text(productLookupError)
+                        .foregroundStyle(.secondary)
+                    Button("Retry product links") {
+                        Task { await loadProducts(forceRefresh: true) }
+                    }
+                    .disabled(isLoadingProducts)
+                }
                 ForEach(order.lines) { line in
                     if let product = productsByName[line.productName ?? ""] {
                         NavigationLink {
@@ -55,17 +70,40 @@ struct CustomerOrderDetails: View {
         .task { await loadProducts() }
     }
 
-    private func loadProducts() async {
-        guard let productRepository else { return }
+    private func loadProducts(forceRefresh: Bool = false) async {
+        if isLoadingProducts {
+            guard !forceRefresh && !hasLoadedProducts else { return }
+            await withCheckedContinuation { productLoadWaiters.append($0) }
+            if !Task.isCancelled && !hasLoadedProducts && productLookupError.isEmpty {
+                await loadProducts()
+            }
+            return
+        }
+        guard forceRefresh || !hasLoadedProducts, let productRepository else { return }
+        isLoadingProducts = true
+        productLookupError = ""
+        defer {
+            isLoadingProducts = false
+            let waiters = productLoadWaiters
+            productLoadWaiters.removeAll()
+            waiters.forEach { $0.resume() }
+        }
         do {
-            let (products, _) = try await productRepository.getAll()
+            let (products, source) = try await productRepository.getAll(forceRefresh: forceRefresh)
+            try Task.checkCancellation()
+            hasLoadedProducts = true
+            if source == .staleDisk {
+                productLookupError = "Couldn't refresh product links. Showing saved information."
+            }
             // Build a name-to-product lookup. Skip products with no name and keep the first duplicate.
             productsByName = Dictionary(
                 products.compactMap { p in p.name.map { ($0, p) } },
                 uniquingKeysWith: { first, _ in first }
             )
         } catch {
-            print("Product lookup failed: \(error)")
+            if !NetworkError.isCancellation(error) {
+                productLookupError = "Product links are unavailable. " + NetworkError.userMessage(for: error)
+            }
         }
     }
 }

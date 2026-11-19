@@ -31,6 +31,11 @@ struct ProductDetails: View {
                     Text(viewModel.errorMessage)
                         .font(.subheadline)
                         .foregroundStyle(.red)
+                    Button("Retry") {
+                        Task { await viewModel.loadDetail(for: product, repository: repository, forceRefresh: true) }
+                    }
+                    .disabled(viewModel.isLoading)
+                    .accessibilityIdentifier("retryProductDetailButton")
                 }
             }
             
@@ -137,26 +142,38 @@ extension ProductDetails {
     class ViewModel {
         
         var isLoading = false
+        private var loadWaiters: [CheckedContinuation<Void, Never>] = []
         var errorMessage = ""
         
         func loadDetail(for product: Product,
                         repository: (any TieredCacheRepositoryProtocol<Product>)?,
                         forceRefresh: Bool = false
         ) async {
+            if isLoading {
+                guard !forceRefresh && product.detailUpdatedAt == nil else { return }
+                await withCheckedContinuation { loadWaiters.append($0) }
+                if !Task.isCancelled && product.detailUpdatedAt == nil && errorMessage.isEmpty {
+                    await loadDetail(for: product, repository: repository)
+                }
+                return
+            }
             guard let repo = repository as? TieredCacheRepositoryBase<Product> else { return }
             
             isLoading = true
-            defer { isLoading = false }
+            errorMessage = ""
+            defer {
+                isLoading = false
+                let waiters = loadWaiters
+                loadWaiters.removeAll()
+                waiters.forEach { $0.resume() }
+            }
             
             do {
                 try await repo.loadDetail(for: product, forceRefresh: forceRefresh)
-                errorMessage = ""
-            } catch is CancellationError {
-                
-            } catch let e as URLError where e.code == .cancelled {
-                
             } catch {
-                errorMessage = error.localizedDescription
+                if !NetworkError.isCancellation(error) {
+                    errorMessage = NetworkError.userMessage(for: error)
+                }
             }
         }
     }

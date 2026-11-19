@@ -28,6 +28,10 @@ struct InventoryList: View {
     var body: some View {
         PageTemplate("Inventory",
                      errorMessage: viewModel.errorMessage,
+                     isLoading: viewModel.isLoading,
+                     hasLoaded: viewModel.hasLoaded,
+                     isEmpty: viewModel.isEmpty,
+                     onRetry: { await viewModel.loadData(repository: repository, forceRefresh: true) },
                      listStyle: .sidebar,
                      onRefresh: { await viewModel.loadData(repository: repository, forceRefresh: true) }) {
             HStack {
@@ -202,6 +206,10 @@ extension InventoryList {
         var locations = PagedItems<LocationGroup>(pageSize: 25)
         var source: CachedDataSource = .notcached
         var errorMessage: String = ""
+        private(set) var isLoading = false
+        private var loadWaiters: [CheckedContinuation<Void, Never>] = []
+        private(set) var hasLoaded = false
+        var isEmpty: Bool { allLines.isEmpty }
 
         private var allLines: [InventoryLine] = []
         // didSet reruns the search whenever the text changes.
@@ -240,16 +248,39 @@ extension InventoryList {
         }
 
         func loadData(repository: (any TieredCacheRepositoryProtocol<Inventory>)?, forceRefresh: Bool = false) async {
-            guard let repository = repository else { return }
+            if isLoading {
+                guard !forceRefresh && !hasLoaded else { return }
+                await withCheckedContinuation { loadWaiters.append($0) }
+                if !Task.isCancelled && !hasLoaded && errorMessage.isEmpty {
+                    await loadData(repository: repository)
+                }
+                return
+            }
+            guard forceRefresh || !hasLoaded, let repository else { return }
+            isLoading = true
+            errorMessage = ""
+            defer {
+                isLoading = false
+                let waiters = loadWaiters
+                loadWaiters.removeAll()
+                waiters.forEach { $0.resume() }
+            }
 
             do {
                 let (rows, source) = try await repository.getAll(forceRefresh: forceRefresh)
+                try Task.checkCancellation()
                 self.source = source
+                hasLoaded = true
+                if source == .staleDisk {
+                    errorMessage = "Couldn't refresh. Showing saved information."
+                }
                 // Copy out of Core Data.
                 setLines(rows.map(InventoryLine.init))
                 print("Loaded \(rows.count) inventory rows in \(locations.all.count) locations from \(source)")
             } catch {
-                errorMessage = error.localizedDescription
+                if !NetworkError.isCancellation(error) {
+                    errorMessage = NetworkError.userMessage(for: error)
+                }
             }
         }
     }

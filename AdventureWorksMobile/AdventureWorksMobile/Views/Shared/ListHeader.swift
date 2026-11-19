@@ -15,16 +15,21 @@ enum ListTop {
 /// First row of a List. Holds the error text and any search or sort controls, so they scroll away under the title.
 struct ListHeader<Controls: View>: View {
     let errorMessage: String
+    let isRefreshing: Bool
+    let onRetry: (() async -> Void)?
     let controls: Controls
 
-    init(errorMessage: String = "", @ViewBuilder controls: () -> Controls) {
+    init(errorMessage: String = "", isRefreshing: Bool = false,
+         onRetry: (() async -> Void)? = nil, @ViewBuilder controls: () -> Controls) {
         self.errorMessage = errorMessage
+        self.isRefreshing = isRefreshing
+        self.onRetry = onRetry
         self.controls = controls()
     }
 
     /// Nothing to show. The row becomes a hidden marker the scroll button can still jump to.
     private var isEmpty: Bool {
-        errorMessage.isEmpty && Controls.self == EmptyView.self
+        errorMessage.isEmpty && !isRefreshing && Controls.self == EmptyView.self
     }
 
     var body: some View {
@@ -44,6 +49,17 @@ struct ListHeader<Controls: View>: View {
                     Text(errorMessage)
                         .font(.subheadline)
                         .foregroundStyle(.red)
+                        .accessibilityIdentifier("loadErrorMessage")
+                    if let onRetry {
+                        Button("Retry") { Task { await onRetry() } }
+                            .disabled(isRefreshing)
+                            .accessibilityIdentifier("retryButton")
+                    }
+                }
+                if isRefreshing {
+                    ProgressView("Refreshing…")
+                        .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("refreshProgress")
                 }
                 controls
             }

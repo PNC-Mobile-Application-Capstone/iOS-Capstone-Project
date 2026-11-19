@@ -118,6 +118,9 @@ class TieredCacheRepositoryBase<Item: NSManagedObject & Codable & Identifiable>:
             await context.perform {
                 if context.hasChanges { context.rollback() }
             }
+            if Task.isCancelled || NetworkError.isCancellation(error) {
+                throw CancellationError()
+            }
             if !diskResults.isEmpty { return (diskResults, .staleDisk) }
             throw error
         }
