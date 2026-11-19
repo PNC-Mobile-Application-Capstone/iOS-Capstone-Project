@@ -46,6 +46,7 @@ struct LoadMoreRow: View {
         ProgressView()
             .frame(maxWidth: .infinity)
             .listRowBackground(Color.clear)
+            .accessibilityLabel("Loading more items")
             .onAppear(perform: loadMore)
     }
 }

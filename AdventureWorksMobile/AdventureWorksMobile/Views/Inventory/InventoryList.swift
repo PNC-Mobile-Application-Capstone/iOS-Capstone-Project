@@ -12,6 +12,7 @@ struct InventoryList: View {
     @State private var isSearchVisible = false
     @State private var expandedLocations: Set<Int64> = []
     @Environment(\.inventoryRepository) private var repository
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private var searchButtonTitle: String {
         if isSearchVisible {
@@ -26,20 +27,29 @@ struct InventoryList: View {
     }
 
     var body: some View {
+        let isLarge = dynamicTypeSize.isAccessibilitySize
+        let controlRowLayout = isLarge
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+            : AnyLayout(HStackLayout(alignment: .center))
+
         PageTemplate("Inventory",
                      errorMessage: viewModel.errorMessage,
                      listStyle: .sidebar,
                      onRefresh: { await viewModel.loadData(repository: repository, forceRefresh: true) }) {
-            HStack {
+            controlRowLayout {
                 Button {
                     isSearchVisible.toggle()
                 } label: {
                     Label(searchButtonTitle, systemImage: "magnifyingglass")
                 }
+                .accessibilityLabel(searchButtonTitle)
                 .accessibilityIdentifier("inventorySearchButton")
-                Spacer()
+                if !isLarge {
+                    Spacer()
+                }
                 Button("Clear", action: viewModel.clearCriteria)
                     .disabled(!viewModel.hasActiveCriteria)
+                    .accessibilityLabel("Clear search")
                     .accessibilityIdentifier("clearCriteriaButton")
             }
             .padding(.vertical, 4)
@@ -50,6 +60,7 @@ struct InventoryList: View {
                     .textFieldStyle(.roundedBorder)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
+                    .accessibilityLabel("Search inventory by product, number, or location")
                     .accessibilityIdentifier("inventorySearchField")
             }
         } content: {

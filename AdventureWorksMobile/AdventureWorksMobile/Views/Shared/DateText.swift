@@ -13,6 +13,16 @@ struct DateText: View {
 
     var body: some View {
         Text(Self.displayDate(date))
+            .accessibilityLabel(Self.spokenDate(date))
+    }
+
+    /// Formats an API date string for VoiceOver, reading "--" as "Not listed".
+    static func spokenDate(_ raw: String?) -> String {
+        if let parsed = parseDate(raw) {
+            return parsed.formatted(date: .long, time: .omitted)
+        }
+        let display = displayDate(raw)
+        return display == "--" ? "Not listed" : display
     }
 
     /// Formats an API date string. Falls back to the raw string if it can't be parsed.

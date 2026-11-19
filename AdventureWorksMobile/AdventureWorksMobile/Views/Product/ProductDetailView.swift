@@ -8,6 +8,7 @@ import SwiftUI
 struct ProductDetails: View {
     
     @Environment(\.productRepository) private var repository
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var viewModel = ViewModel()
     @ObservedObject var product: Product
     
@@ -25,6 +26,8 @@ struct ProductDetails: View {
                         Text("Loading details…")
                             .foregroundStyle(.secondary)
                     }
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("Loading product details")
                 }
                 
                 if !viewModel.errorMessage.isEmpty {
@@ -41,7 +44,7 @@ struct ProductDetails: View {
             }
             
             if let summary = product.summary, !summary.isEmpty {
-                Section() {
+                Section("Summary") {
                     Text(summary)
                 }
             }
@@ -50,6 +53,8 @@ struct ProductDetails: View {
                 Section("Specifications") {
                     ForEach(product.specs) { row in
                         LabeledContent(row.label, value: row.value)
+                            .accessibilityElement(children: .ignore)
+                            .accessibilityLabel("\(row.label), \(row.value)")
                     }
                 }
             }
@@ -58,6 +63,8 @@ struct ProductDetails: View {
                 Section("Warranty & Maintenance") {
                     ForEach(product.warrantyAndMaintenance) { row in
                         LabeledContent(row.label, value: row.value)
+                            .accessibilityElement(children: .ignore)
+                            .accessibilityLabel("\(row.label), \(row.value)")
                     }
                 }
             }
@@ -80,6 +87,11 @@ struct ProductDetails: View {
     
     // MARK: - Build components
     
+    private var headerAccessibilityLabel: String {
+        let number = product.productNumber?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return number.isEmpty ? product.displayName : "\(product.displayName), Product number \(number)"
+    }
+    
     private var header: some View {
         VStack(spacing: 8) {
             if let data = product.displayPhotoData, let uiImage = UIImage(data: data) {
@@ -87,15 +99,17 @@ struct ProductDetails: View {
                     .resizable()
                     .scaledToFit()
                     .frame(maxWidth: .infinity, maxHeight: 200)
+                    .accessibilityHidden(true)
             } else {
                 Image(systemName: "photo")
                     .resizable()
                     .scaledToFit()
                     .frame(height: 120)
                     .foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
             }
             
-            Text(product.name ?? "Unnamed product")
+            Text(product.displayName)
                 .font(.title2)
                 .fontWeight(.bold)
                 .multilineTextAlignment(.center)
@@ -103,12 +117,21 @@ struct ProductDetails: View {
             Text(product.productNumber ?? "")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(headerAccessibilityLabel)
+        .accessibilityAddTraits(.isHeader)
+    }
+
+    private var gridColumns: [GridItem] {
+        let count = dynamicTypeSize.isAccessibilitySize ? 1 : 2
+        return Array(repeating: GridItem(.flexible()), count: count)
     }
     
     private var overviewGrid: some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+        LazyVGrid(columns: gridColumns, spacing: 12) {
             StatBlock(label: "Price",
                       value: product.listPrice.formatted(.currency(code: "USD")))
             StatBlock(label: "Color", value: product.color ?? "—")
@@ -118,7 +141,7 @@ struct ProductDetails: View {
     }
     
     private var manufacturingGrid: some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+        LazyVGrid(columns: gridColumns, spacing: 12) {
             StatBlock(label: "Steps", value: "\(product.numberOfSteps)")
             StatBlock(label: "Lot Size", value: "\(product.lotSize)")
             StatBlock(label: "Setup Hours", value: product.setupHours.hoursFormat)

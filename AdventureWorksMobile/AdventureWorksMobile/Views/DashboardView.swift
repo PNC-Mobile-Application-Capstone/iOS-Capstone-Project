@@ -10,6 +10,7 @@ struct DashboardView: View {
     // Used for finding the product or employee row to open
     @Environment(\.productRepository) private var productRepository
     @Environment(\.employeeRepository) private var employeeRepository
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     
     @State private var viewModel: ViewModel
     @State private var showsDailySales = false
@@ -64,12 +65,7 @@ struct DashboardView: View {
                 
                 if showsDailySales {
                     ForEach(viewModel.lastWeekSales) { entry in
-                        HStack {
-                            Text(entry.salesDate, format: .dateTime.weekday(.abbreviated))
-                            Spacer()
-                            // Dollars with no cents.
-                            Text(entry.totalSales, format: .currency(code: "USD").precision(.fractionLength(0)))
-                        }
+                        DailySalesRow(entry: entry)
                     }
                 }
             }
@@ -88,16 +84,7 @@ struct DashboardView: View {
             Section("Low Stock Alert") {
                 ForEach(viewModel.lowStock) { item in
                     productLink(item.productId) {
-                        HStack {
-                            StockStatusIcon(level: StockLevel(
-                                quantity: item.stockLevel,
-                                reorderPoint: item.reorderPoint,
-                                safetyStockLevel: item.safetyStockLevel ?? 1000)
-                            )
-                            Text(item.productName)
-                            Spacer()
-                            Text("\(item.stockLevel) left")
-                        }
+                        LowStockRow(item: item)
                     }
                 }
             }
@@ -132,10 +119,19 @@ struct DashboardView: View {
         }
     }
     
+    private var twoColumnOrStacked: [GridItem] {
+        let count = dynamicTypeSize.isAccessibilitySize ? 1 : 2
+        return Array(repeating: GridItem(.flexible(), spacing: 10), count: count)
+    }
+
+    private var threeColumnOrStacked: [GridItem] {
+        let count = dynamicTypeSize.isAccessibilitySize ? 1 : 3
+        return Array(repeating: GridItem(.flexible(), spacing: 10), count: count)
+    }
     
     private var statGrid: some View {
-        // Two equal columns of stat blocks.
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+        // Two equal columns of stat blocks, or one column at accessibility Dynamic Type sizes.
+        LazyVGrid(columns: twoColumnOrStacked, spacing: 12) {
             StatBlock(label: "Weekly Sales", value: viewModel.totalSales.formatted(.currency(code: "USD")))
             StatBlock(label: "Weekly Profit", value: viewModel.totalProfit.formatted(.currency(code: "USD")))
             StatBlock(label: "Low Stock Items", value: "\(viewModel.lowStock.count)")
@@ -144,7 +140,7 @@ struct DashboardView: View {
     }
     
     private var productTiles: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 2), spacing: 10) {
+        LazyVGrid(columns: twoColumnOrStacked, spacing: 10) {
             if let top = viewModel.topSellers.first {
                 productTile(top, label: "Top Seller", systemImage: "chart.line.uptrend.xyaxis", color: .green)
             }
@@ -170,6 +166,8 @@ struct DashboardView: View {
                 tile
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("\(label): \(entry.productName), \(entry.unitsSold) sold")
+            .accessibilityHint("Opens product details")
         } else {
             tile
         }
@@ -178,7 +176,7 @@ struct DashboardView: View {
         let currentShift = ShiftKind.current()
         
         return VStack(spacing: 8) {
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
+            LazyVGrid(columns: threeColumnOrStacked, spacing: 10) {
                 ForEach(viewModel.shiftGroups) { group in
                     let isSelected = group.id == selectedShift
                     let isOnNow = group.kind == currentShift
@@ -190,7 +188,7 @@ struct DashboardView: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(group.accessibilityText(isOnNow: isOnNow))
-                    .accessibilityHint(isSelected ? "Hides who is working this shift" : "SHows who is working this shift")
+                    .accessibilityHint(isSelected ? "Hides who is working this shift" : "Shows who is working this shift")
                     .accessibilityAddTraits(isSelected ? .isSelected : [])
                 }
             }
@@ -397,8 +395,10 @@ private struct ProductTile: View {
     let unitsSold: Int
     let productName: String
     let showsChevron: Bool
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     
     var body: some View {
+        let isLarge = dynamicTypeSize.isAccessibilitySize
         VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Label {
@@ -409,7 +409,7 @@ private struct ProductTile: View {
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
-                .lineLimit(1)
+                .lineLimit(isLarge ? nil : 1)
                 .minimumScaleFactor(0.8)
                 
                 Spacer(minLength: 0)
@@ -425,16 +425,75 @@ private struct ProductTile: View {
                 .font(.title2)
                 .fontWeight(.bold)
             
-            Text(productName)
-                .font(.footnote)
-                .lineLimit(2, reservesSpace: true)
+            if isLarge {
+                Text(productName)
+                    .font(.footnote)
+            } else {
+                Text(productName)
+                    .font(.footnote)
+                    .lineLimit(2, reservesSpace: true)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
         .background(Color(uiColor: .secondarySystemGroupedBackground))
         .clipShape(.rect(cornerRadius: 12))
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(label): \(productName), \(unitsSold) sold")
+    }
+}
+
+private struct DailySalesRow: View {
+    let entry: WeeklySalesEntry
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    var body: some View {
+        let isLarge = dynamicTypeSize.isAccessibilitySize
+        let layout = isLarge
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 2))
+            : AnyLayout(HStackLayout(alignment: .firstTextBaseline))
+
+        layout {
+            Text(entry.salesDate, format: .dateTime.weekday(.abbreviated))
+            if !isLarge {
+                Spacer()
+            }
+            // Dollars with no cents.
+            Text(entry.totalSales, format: .currency(code: "USD").precision(.fractionLength(0)))
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(entry.salesDate.formatted(.dateTime.weekday(.wide))), \(entry.totalSales.formatted(.currency(code: "USD").precision(.fractionLength(0))))")
+    }
+}
+
+private struct LowStockRow: View {
+    let item: LowStockEntry
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    var body: some View {
+        let isLarge = dynamicTypeSize.isAccessibilitySize
+        let level = StockLevel(
+            quantity: item.stockLevel,
+            reorderPoint: item.reorderPoint,
+            safetyStockLevel: item.safetyStockLevel ?? 1000
+        )
+        let layout = isLarge
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4))
+            : AnyLayout(HStackLayout(alignment: .center, spacing: 8))
+
+        layout {
+            HStack(alignment: .top, spacing: 8) {
+                StockStatusIcon(level: level)
+                Text(item.productName)
+            }
+            if !isLarge {
+                Spacer()
+            }
+            Text("\(item.stockLevel) left")
+                .foregroundStyle(.secondary)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(item.productName), \(item.stockLevel) left, \(level.status.label).")
     }
 }
 
@@ -445,13 +504,15 @@ private struct ShiftTile: View {
     let group: ShiftGroup
     let isSelected: Bool
     let isOnNow: Bool
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     
     var body: some View {
+        let isLarge = dynamicTypeSize.isAccessibilitySize
         VStack(spacing: 4) {
             Label(group.name, systemImage: group.systemImage)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
-                .lineLimit(1)
+                .lineLimit(isLarge ? nil : 1)
                 .minimumScaleFactor(0.7)
             
             Text("\(group.people.count)")
@@ -461,14 +522,16 @@ private struct ShiftTile: View {
             Text(group.hours ?? " ")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-                .lineLimit(1)
+                .lineLimit(isLarge ? nil : 1)
                 .minimumScaleFactor(0.7)
             
-            Text("On now")
-                .font(.caption2)
-                .fontWeight(.semibold)
-                .foregroundStyle(.green)
-                .opacity(isOnNow ? 1 : 0)
+            if !isLarge || isOnNow {
+                Text("On now")
+                    .font(.caption2)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.green)
+                    .opacity(isOnNow ? 1 : 0)
+            }
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
@@ -479,6 +542,8 @@ private struct ShiftTile: View {
             RoundedRectangle(cornerRadius: 12)
                 .strokeBorder(Color.accentColor, lineWidth: isSelected ? 2 : 0)
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(group.accessibilityText(isOnNow: isOnNow))
     }
 }
 
@@ -487,14 +552,17 @@ private struct ShiftPersonRow: View {
     let jobTitle: String?
     
     var body: some View {
+        let trimmedJob = jobTitle?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         VStack(alignment: .leading, spacing: 2) {
             Text(name)
-            if let jobTitle, !jobTitle.isEmpty {
-                Text(jobTitle)
+            if !trimmedJob.isEmpty {
+                Text(trimmedJob)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(trimmedJob.isEmpty ? name : "\(name), \(trimmedJob).")
     }
 }
 
