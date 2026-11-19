@@ -12,6 +12,7 @@ import SwiftUI
 struct EmployeeDetails: View {
 
     @Environment(\.employeeRepository) private var repository
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var viewModel = ViewModel()
     
     var employee: EmployeeRow
@@ -37,11 +38,13 @@ struct EmployeeDetails: View {
             }
 
             Section("Employment") {
-                LabeledContent("Job Title", value: jobTitle.orPlaceholder)
-                LabeledContent("Department", value: department.orPlaceholder)
-                LabeledContent("Shift", value: employee.shiftName)
+                infoRow("Job Title", value: jobTitle.orPlaceholder)
+                infoRow("Department", value: department.orPlaceholder)
+                infoRow("Shift", value: employee.shiftName)
                 LabeledContent("Hire Date") { DateText(date: employee.hireDate) }
-                LabeledContent("Time at Company", value: employee.timeAtCompany)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("Hire Date, \(DateText.spokenDate(employee.hireDate))")
+                infoRow("Time at Company", value: employee.timeAtCompany)
             }
             
             Section("Employment History") {
@@ -49,22 +52,32 @@ struct EmployeeDetails: View {
             }
 
             Section("Personal") {
-                LabeledContent("First Name", value: employee.firstName.orPlaceholder)
-                LabeledContent("Last Name", value: employee.lastName.orPlaceholder)
+                infoRow("First Name", value: employee.firstName.orPlaceholder)
+                infoRow("Last Name", value: employee.lastName.orPlaceholder)
                 // Wrap in String so the ID shows without a comma.
-                LabeledContent("Employee ID", value: String(employee.id))
+                infoRow("Employee ID", value: String(employee.id))
             }
-            .navigationTitle(String("Employee #\(employee.id)"))
-            .navigationBarTitleDisplayMode(.inline)
-            .refreshable { await viewModel.loadHistory(for: employee.id, repository: repository) }
-            .task { await viewModel.loadHistory(for: employee.id, repository: repository) }
         }
         // Wrap in String so the ID shows without a comma.
         .navigationTitle(String("Employee #\(employee.id)"))
         .navigationBarTitleDisplayMode(.inline)
+        .refreshable { await viewModel.loadHistory(for: employee.id, repository: repository) }
+        .task { await viewModel.loadHistory(for: employee.id, repository: repository) }
     }
 
     // MARK: - Build components
+
+    private func infoRow(_ label: String, value: String) -> some View {
+        let spoken = (value == "--" || value == "—" || value.isEmpty) ? "Not listed" : value
+        return LabeledContent(label, value: value)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("\(label), \(spoken)")
+    }
+
+    private var headerAccessibilityLabel: String {
+        let title = jobTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        return title.isEmpty ? employee.displayName : "\(employee.displayName), \(title)"
+    }
 
     private var header: some View {
         VStack(spacing: 8) {
@@ -80,7 +93,6 @@ struct EmployeeDetails: View {
                 .font(.title2)
                 .fontWeight(.bold)
                 .multilineTextAlignment(.center)
-                .accessibilityAddTraits(.isHeader)
 
             Text(jobTitle.orPlaceholder)
                 .font(.subheadline)
@@ -89,11 +101,18 @@ struct EmployeeDetails: View {
         }
         .frame(maxWidth: .infinity)
         // VoiceOver reads the name and title as one item.
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(headerAccessibilityLabel)
+        .accessibilityAddTraits(.isHeader)
+    }
+
+    private var gridColumns: [GridItem] {
+        let count = dynamicTypeSize.isAccessibilitySize ? 1 : 2
+        return Array(repeating: GridItem(.flexible()), count: count)
     }
 
     private var overviewGrid: some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+        LazyVGrid(columns: gridColumns, spacing: 12) {
             StatBlock(label: "Department", value: department.orPlaceholder)
             StatBlock(label: "Shift", value: employee.shiftName)
             StatBlock(label: "Hired", value: DateText.displayDate(employee.hireDate))
@@ -109,6 +128,8 @@ struct EmployeeDetails: View {
                 Text("Loading history...")
                     .foregroundStyle(.secondary)
             }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Loading employment history")
         }
         
         if !viewModel.errorMessage.isEmpty {
@@ -172,12 +193,20 @@ extension EmployeeDetails {
 
 private struct EmploymentHistoryRow: View {
     let entry: EmploymentHistoryEntry
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     
     var body: some View {
+        let isLarge = dynamicTypeSize.isAccessibilitySize
+        let topLayout = isLarge
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 2))
+            : AnyLayout(HStackLayout(alignment: .firstTextBaseline))
+
         VStack(alignment: .leading, spacing: 2) {
-            HStack(alignment: .firstTextBaseline) {
+            topLayout {
                 Text(entry.departmentText)
-                Spacer()
+                if !isLarge {
+                    Spacer()
+                }
                 if entry.isCurrent {
                     Label {
                         Text("Current")

@@ -68,6 +68,8 @@ struct PageTemplate<Controls: View, Content: View>: View {
                             } label: {
                                 Label("Account", systemImage: "person.crop.circle")
                             }
+                            .accessibilityLabel("Account")
+                            .accessibilityHint("Opens account settings")
                             .accessibilityIdentifier("accountButton")
                         }
                     }

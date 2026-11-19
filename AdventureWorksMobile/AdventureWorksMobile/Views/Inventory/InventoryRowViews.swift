@@ -24,6 +24,7 @@ extension StockLevel.Band {
 /// Header for one location section.
 struct LocationHeader: View {
     let location: LocationGroup
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private var itemText: String {
         location.lines.count == 1 ? "1 item" : "\(location.lines.count) items"
@@ -33,17 +34,32 @@ struct LocationHeader: View {
         location.needsReorderCount == 1 ? "1 needs reorder" : "\(location.needsReorderCount) need reorder"
     }
 
+    private var accessibilityText: String {
+        var text = "\(location.name), Location \(location.locationId), \(itemText)."
+        if location.needsReorderCount > 0 {
+            text += " \(reorderText)."
+        }
+        return text
+    }
+
     var body: some View {
-        HStack(alignment: .firstTextBaseline) {
+        let isLarge = dynamicTypeSize.isAccessibilitySize
+        let layout = isLarge
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4))
+            : AnyLayout(HStackLayout(alignment: .firstTextBaseline))
+
+        layout {
             VStack(alignment: .leading, spacing: 2) {
                 Text(location.name)
                     .font(.headline)
-                    .foregroundStyle(.black)
+                    .foregroundStyle(.primary)
                 Text(verbatim: "Location \(location.locationId) · \(itemText)")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-            Spacer()
+            if !isLarge {
+                Spacer()
+            }
             if location.needsReorderCount > 0 {
                 // Orange icon, normal text color so it stays easy to read.
                 HStack(spacing: 4) {
@@ -57,7 +73,8 @@ struct LocationHeader: View {
         }
         // Keep normal casing, and have VoiceOver read the header as one item.
         .textCase(nil)
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityText)
     }
 }
 
@@ -114,15 +131,21 @@ struct InventoryLineDetails: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            LabeledContent("Product number", value: line.productNumberText)
-            LabeledContent("Location", value: "\(line.location) (ID \(line.locationId))")
-            LabeledContent("Shelf and bin", value: line.shelfBin)
-            LabeledContent("Quantity", value: line.quantity.formatted())
-            LabeledContent("Reorder point", value: line.reorderPoint.formatted())
-            LabeledContent("Safety stock", value: line.safetyStockLevel.formatted())
-            LabeledContent("Stock level", value: line.percentOfSafetyText)
+            detailRow("Product number", value: line.productNumberText)
+            detailRow("Location", value: "\(line.location) (ID \(line.locationId))")
+            detailRow("Shelf and bin", value: line.shelfBin)
+            detailRow("Quantity", value: line.quantity.formatted())
+            detailRow("Reorder point", value: line.reorderPoint.formatted())
+            detailRow("Safety stock", value: line.safetyStockLevel.formatted())
+            detailRow("Stock level", value: line.percentOfSafetyText)
         }
         .font(.subheadline)
         .accessibilityElement(children: .contain)
+    }
+
+    private func detailRow(_ label: String, value: String) -> some View {
+        LabeledContent(label, value: value)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("\(label), \(value)")
     }
 }

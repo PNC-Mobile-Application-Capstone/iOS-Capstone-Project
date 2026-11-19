@@ -428,7 +428,7 @@ struct AdventureWorksMobileTests {
     }
 
     @Test
-    func stockLevelUsesSketchBandsAndReorderPointFlag() {
+    func stockLevelUsesConsistentStatusBandsAndReorderPointFlag() {
         func level(_ quantity: Int64, reorder: Int64 = 750, safety: Int64 = 1000) -> StockLevel {
             StockLevel(quantity: quantity, reorderPoint: reorder, safetyStockLevel: safety)
         }
@@ -440,22 +440,25 @@ struct AdventureWorksMobileTests {
         #expect(level(251).status == .reorder)
         #expect(level(251).band == .orange)
         #expect(level(500).band == .orange)
-        #expect(level(501).band == .yellow)
+        #expect(level(501).band == .orange)
         #expect(level(750).status == .reorder)
-        #expect(level(750).band == .yellow)
+        #expect(level(750).band == .orange)
         #expect(level(750).needsReorder)
         #expect(level(751).status == .low)
-        #expect(level(751).band == .green)
-        #expect(level(999).band == .green)
+        #expect(level(751).band == .yellow)
+        #expect(level(999).band == .yellow)
         #expect(level(1000).status == .inStock)
-        #expect(level(1000).band == .blue)
+        #expect(level(1000).band == .green)
 
-        // The Reorder flag follows the reorder point, not the color band.
+        // The Reorder flag follows the reorder point, and its band is always orange.
         #expect(level(850, reorder: 900).status == .reorder)
+        #expect(level(850, reorder: 900).band == .orange)
 
         // No safety stock set: no divide by zero.
         #expect(level(0, reorder: 0, safety: 0).status == .outOfStock)
+        #expect(level(0, reorder: 0, safety: 0).band == .red)
         #expect(level(5, reorder: 0, safety: 0).status == .inStock)
+        #expect(level(5, reorder: 0, safety: 0).band == .green)
         #expect(level(5, reorder: 0, safety: 0).fractionOfSafetyStock == nil)
 
         // Every status has its own icon, so color is never the only signal.
@@ -465,6 +468,40 @@ struct AdventureWorksMobileTests {
         #expect(StockLevel.worstFirst(level(0), level(100)))
         #expect(StockLevel.worstFirst(level(100), level(200)))
         #expect(!StockLevel.worstFirst(level(1000), level(800)))
+    }
+
+    @Test
+    func accessibilitySummariesCombineRowFieldsForVoiceOver() {
+        let context = PersistenceController(inMemory: true).container.viewContext
+
+        let product = Product(context: context)
+        product.id = 1
+        product.name = "Road-150 Red, 62"
+        product.listPrice = 3578.27
+        #expect(product.accessibilitySummary == "Road-150 Red, 62, $3,578.27.")
+
+        let orderRow = CustomerOrder(context: context)
+        orderRow.id = 10
+        orderRow.orderNumber = 43659
+        orderRow.firstName = "Jordan"
+        orderRow.lastName = "Lee"
+        orderRow.orderDate = "2026-10-16"
+        orderRow.productName = "Road-150 Red, 62"
+        orderRow.orderQty = 2
+        orderRow.unitPrice = 100
+        orderRow.lineTotal = 200
+        let orderGroup = OrderGroup(orderNumber: 43659, rows: [orderRow])
+        #expect(orderGroup.accessibilitySummary.contains("Order 43659. Jordan Lee. Total $200.00."))
+        #expect(orderGroup.lines.first?.accessibilitySummary == "Road-150 Red, 62. 2 at $100.00, total $200.00.")
+
+        let employee = Employee(context: context)
+        employee.id = 7
+        employee.firstName = "Priya"
+        employee.lastName = "Nair"
+        employee.jobTitle = "Design Engineer"
+        employee.department = "Engineering"
+        let employeeRow = EmployeeRow(employee)
+        #expect(employeeRow.accessibilitySummary == "Priya Nair, Design Engineer, Engineering.")
     }
 
     @Test

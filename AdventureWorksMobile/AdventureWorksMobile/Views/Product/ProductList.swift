@@ -10,6 +10,7 @@ struct ProductList: View {
     @State private var viewModel = ViewModel()
     @State private var isSearchVisible = false
     @Environment(\.productRepository) private var repository
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private var searchButtonTitle: String {
         if isSearchVisible {
@@ -24,19 +25,28 @@ struct ProductList: View {
     }
 
     var body: some View {
+        let isLarge = dynamicTypeSize.isAccessibilitySize
+        let controlRowLayout = isLarge
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+            : AnyLayout(HStackLayout(alignment: .center))
+
         PageTemplate("Products",
                      errorMessage: viewModel.errorMessage,
                      onRefresh: { await viewModel.loadData(repository: repository, forceRefresh: true) }) {
-            HStack {
+            controlRowLayout {
                 Button {
                     isSearchVisible.toggle()
                 } label: {
                     Label(searchButtonTitle, systemImage: "magnifyingglass")
                 }
+                .accessibilityLabel(searchButtonTitle)
                 .accessibilityIdentifier("productSearchButton")
-                Spacer()
+                if !isLarge {
+                    Spacer()
+                }
                 Button("Clear", action: viewModel.clearCriteria)
                     .disabled(!viewModel.hasActiveCriteria)
+                    .accessibilityLabel("Clear search and sort")
                     .accessibilityIdentifier("clearCriteriaButton")
             }
             .padding(.vertical, 4)
@@ -47,12 +57,16 @@ struct ProductList: View {
                     .textFieldStyle(.roundedBorder)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
+                    .accessibilityLabel("Search products by name or product number")
                     .accessibilityIdentifier("productSearchField")
             }
-            HStack {
+            controlRowLayout {
                 Text("Sort by")
                     .font(.subheadline)
-                Spacer()
+                    .accessibilityHidden(true)
+                if !isLarge {
+                    Spacer()
+                }
                 // Each option's tag is the value the picker writes to sortOption.
                 Picker("Sort by", selection: $viewModel.sortOption) {
                     ForEach(SortOption.allCases) { option in
@@ -61,6 +75,8 @@ struct ProductList: View {
                 }
                 .pickerStyle(.menu)
                 .labelsHidden()
+                .accessibilityLabel("Sort by")
+                .accessibilityValue(viewModel.sortOption.rawValue)
                 .accessibilityIdentifier("productSortPicker")
             }
         } content: {
@@ -75,12 +91,7 @@ struct ProductList: View {
                 NavigationLink {
                     ProductDetails(product: item)
                 } label: {
-                    HStack {
-                        Text(item.name ?? "--")
-                        Spacer()
-                        Text(item.listPrice, format: .currency(code: "USD"))
-                            .foregroundStyle(.secondary)
-                    }
+                    ProductRow(product: item)
                 }
             }
 
@@ -91,6 +102,40 @@ struct ProductList: View {
         }
         // Load the data when the screen appears.
         .task { await viewModel.loadData(repository: repository) }
+    }
+}
+
+private struct ProductRow: View {
+    @ObservedObject var product: Product
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    var body: some View {
+        let isLarge = dynamicTypeSize.isAccessibilitySize
+        let layout = isLarge
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4))
+            : AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: 12))
+
+        layout {
+            Text(product.displayName)
+            if !isLarge {
+                Spacer()
+            }
+            Text(product.listPrice, format: .currency(code: "USD"))
+                .foregroundStyle(.secondary)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(product.accessibilitySummary)
+    }
+}
+
+extension Product {
+    var displayName: String {
+        let trimmed = name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? "Unnamed product" : trimmed
+    }
+
+    var accessibilitySummary: String {
+        "\(displayName), \(listPrice.formatted(.currency(code: "USD")))."
     }
 }
 

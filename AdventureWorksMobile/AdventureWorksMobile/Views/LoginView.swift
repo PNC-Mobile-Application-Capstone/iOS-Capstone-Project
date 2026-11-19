@@ -9,6 +9,8 @@ struct LoginView: View {
     // @State, not @StateObject, because ViewModel uses @Observable instead of ObservableObject.
     @State private var viewModel = ViewModel()
     @EnvironmentObject var authStatus: AuthStatus
+    @ScaledMetric(relativeTo: .largeTitle) private var logoSize: CGFloat = 36
+    @ScaledMetric(relativeTo: .largeTitle) private var logoFrame: CGFloat = 80
 
 
     var body: some View {
@@ -23,6 +25,8 @@ struct LoginView: View {
                         Label(message, systemImage: "info.circle")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
+                            .accessibilityElement(children: .ignore)
+                            .accessibilityLabel(message)
                             .accessibilityIdentifier("sessionMessage")
                     }
 
@@ -31,12 +35,14 @@ struct LoginView: View {
                         // $ makes a two-way binding to the view model.
                         TextField("Enter your username", text: $viewModel.credentials.username)
                             .textContentType(.username)
+                            .accessibilityLabel("Username")
                             .accessibilityIdentifier("usernameField")
                     }
 
                     field("Password") {
                         SecureField("Enter your password", text: $viewModel.credentials.password)
                             .textContentType(.password)
+                            .accessibilityLabel("Password")
                             .accessibilityIdentifier("passwordField")
                     }
 
@@ -44,6 +50,8 @@ struct LoginView: View {
                         Label(viewModel.errorMessage, systemImage: "exclamationmark.circle")
                             .font(.subheadline)
                             .foregroundStyle(.red)
+                            .accessibilityElement(children: .ignore)
+                            .accessibilityLabel("Error: \(viewModel.errorMessage)")
                             .accessibilityIdentifier("loginErrorMessage")
                     }
 
@@ -60,6 +68,7 @@ struct LoginView: View {
                     .buttonBorderShape(.roundedRectangle(radius: 12))
                     .tint(.green)
                     .disabled(viewModel.loginDisabled)
+                    .accessibilityLabel(viewModel.isBusy ? "Signing in" : "Sign in")
                     .accessibilityIdentifier("loginButton")
                 }
                 .padding(24)
@@ -80,9 +89,9 @@ struct LoginView: View {
     private var header: some View {
         VStack(spacing: 14) {
             Image(systemName: "bicycle")
-                .font(.system(size: 36, weight: .semibold))
+                .font(.system(size: min(logoSize, 64), weight: .semibold))
                 .foregroundStyle(.green)
-                .frame(width: 80, height: 80)
+                .frame(width: min(logoFrame, 120), height: min(logoFrame, 120))
                 .background(.green.opacity(0.12), in: RoundedRectangle(cornerRadius: 20))
                 .accessibilityHidden(true)
 
@@ -100,7 +109,9 @@ struct LoginView: View {
         @ViewBuilder content: () -> Content
     ) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(title).font(.subheadline.weight(.medium))
+            Text(title)
+                .font(.subheadline.weight(.medium))
+                .accessibilityHidden(true)
 
             content()
                 .textInputAutocapitalization(.never)

@@ -11,6 +11,7 @@ struct EmployeeList: View {
     @State private var viewModel = ViewModel()
     @State private var isSearchVisible = false
     @Environment(\.employeeRepository) private var repository
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     
     private var searchButtonTitle: String {
         if isSearchVisible { return "Hide search" }
@@ -19,20 +20,29 @@ struct EmployeeList: View {
     }
     
     var body: some View {
+        let isLarge = dynamicTypeSize.isAccessibilitySize
+        let controlRowLayout = isLarge
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+            : AnyLayout(HStackLayout(alignment: .center))
+
         PageTemplate("Employees",
                      errorMessage: viewModel.errorMessage,
                      onRefresh: { await viewModel.loadData(repository: repository, forceRefresh: true) }) {
             
-            HStack {
+            controlRowLayout {
                 Button {
                     isSearchVisible.toggle()
                 } label: {
                     Label(searchButtonTitle, systemImage: "magnifyingglass")
                 }
+                .accessibilityLabel(searchButtonTitle)
                 .accessibilityIdentifier("employeeSearchButton")
-                Spacer()
+                if !isLarge {
+                    Spacer()
+                }
                 Button("Clear", action: viewModel.clearCriteria)
                     .disabled(!viewModel.hasActiveCriteria)
+                    .accessibilityLabel("Clear search and sort")
                     .accessibilityIdentifier("clearCriteriaButton")
             }
             .padding(.vertical, 4)
@@ -42,12 +52,16 @@ struct EmployeeList: View {
                     .textFieldStyle(.roundedBorder)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
+                    .accessibilityLabel("Search employees by name, department, or job title")
                     .accessibilityIdentifier("employeeSearchField")
             }
-            HStack {
+            controlRowLayout {
                 Text("Sort by")
                     .font(.subheadline)
-                Spacer()
+                    .accessibilityHidden(true)
+                if !isLarge {
+                    Spacer()
+                }
                 Picker("Sort by", selection: $viewModel.sort) {
                     ForEach(EmployeeSort.allCases) { option in
                         Text(option.rawValue).tag(option)
@@ -55,6 +69,8 @@ struct EmployeeList: View {
                 }
                 .pickerStyle(.menu)
                 .labelsHidden()
+                .accessibilityLabel("Sort by")
+                .accessibilityValue(viewModel.sort.rawValue)
                 .accessibilityIdentifier("employeeSortPicker")
             }
             
@@ -68,19 +84,7 @@ struct EmployeeList: View {
                 NavigationLink {
                     EmployeeDetails(employee: employee)
                 } label: {
-                    VStack(alignment: .leading, spacing: 2) {
-                        HStack {
-                            Text(employee.displayName)
-                            Spacer()
-                            Text(employee.department)
-                                .foregroundStyle(.secondary)
-                                .font(.subheadline)
-                        }
-                        Spacer()
-                        Text(employee.jobTitle)
-                            .foregroundStyle(.secondary)
-                            .font(.subheadline)
-                    }
+                    EmployeeListRow(employee: employee)
                 }
             }
             
@@ -91,6 +95,39 @@ struct EmployeeList: View {
         }
         // Load the data when the screen appears.
         .task { await viewModel.loadData(repository: repository) }
+    }
+}
+
+private struct EmployeeListRow: View {
+    let employee: EmployeeRow
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    var body: some View {
+        let isLarge = dynamicTypeSize.isAccessibilitySize
+        let topLayout = isLarge
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 2))
+            : AnyLayout(HStackLayout(alignment: .firstTextBaseline))
+
+        VStack(alignment: .leading, spacing: 4) {
+            topLayout {
+                Text(employee.displayName)
+                if !isLarge {
+                    Spacer()
+                }
+                if !employee.department.isEmpty {
+                    Text(employee.department)
+                        .foregroundStyle(.secondary)
+                        .font(.subheadline)
+                }
+            }
+            if !employee.jobTitle.isEmpty {
+                Text(employee.jobTitle)
+                    .foregroundStyle(.secondary)
+                    .font(.subheadline)
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(employee.accessibilitySummary)
     }
 }
 
@@ -142,6 +179,13 @@ struct EmployeeRow: Identifiable, Hashable {
     var displayName: String {
         let name = [firstName, lastName].filter { !$0.isEmpty }.joined(separator: " ")
         return name.isEmpty ? "Name not listed" : name
+    }
+
+    var accessibilitySummary: String {
+        let trimmedJob = jobTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedDept = department.trimmingCharacters(in: .whitespacesAndNewlines)
+        let parts = [displayName, trimmedJob, trimmedDept].filter { !$0.isEmpty }
+        return parts.joined(separator: ", ") + "."
     }
 }
 

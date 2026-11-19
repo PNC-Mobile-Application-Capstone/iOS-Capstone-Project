@@ -30,19 +30,9 @@ nonisolated struct StockLevel: Equatable {
         return .inStock
     }
 
-    /// Color band from the team sketch. Each band includes its top edge, so exactly 75% is yellow.
+    /// Color band for the status, so the icon color always matches the status label.
     var band: Band {
-        guard let fraction = fractionOfSafetyStock else {
-            return quantity <= 0 ? .red : (needsReorder ? .orange : .blue)
-        }
-        switch fraction {
-        // "...0.25" means up to and including 0.25. "..<1.00" means below 1.00.
-        case ...0.25: return .red
-        case ...0.50: return .orange
-        case ...0.75: return .yellow
-        case ..<1.00: return .green
-        default:      return .blue
-        }
+        status.band
     }
 
     /// Sorts worst first: by status, then by how far below safety stock.
@@ -83,6 +73,16 @@ nonisolated struct StockLevel: Equatable {
             case .reorder:    "exclamationmark.triangle.fill"
             case .low:        "arrow.down.circle.fill"
             case .inStock:    "checkmark.circle.fill"
+            }
+        }
+
+        /// Consistent color band for each status.
+        var band: Band {
+            switch self {
+            case .outOfStock, .critical: .red
+            case .reorder:               .orange
+            case .low:                   .yellow
+            case .inStock:               .green
             }
         }
 

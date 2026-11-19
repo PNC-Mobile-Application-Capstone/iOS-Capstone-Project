@@ -11,24 +11,43 @@ struct CustomerOrderList: View {
     @State private var viewModel = ViewModel()
     @State private var isSearchVisible = false
     @Environment(\.customerOrderRepository) private var repository
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    private var searchButtonTitle: String {
+        if isSearchVisible {
+            return "Hide search"
+        }
+
+        if viewModel.searchText.isEmpty {
+            return "Search"
+        }
+
+        return "Search: \(viewModel.searchText)"
+    }
 
     var body: some View {
+        let isLarge = dynamicTypeSize.isAccessibilitySize
+        let controlRowLayout = isLarge
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+            : AnyLayout(HStackLayout(alignment: .center))
+
         PageTemplate("Orders",
                      errorMessage: viewModel.errorMessage,
                      onRefresh: { await viewModel.loadData(repository: repository, forceRefresh: true) }) {
-            HStack {
+            controlRowLayout {
                 Button {
                     isSearchVisible.toggle()
                 } label: {
-                    // Button text is "Hide search", "Search", or "Search: <text>".
-                    Label(isSearchVisible ? "Hide search" :
-                            (viewModel.searchText.isEmpty ? "Search" : "Search: \(viewModel.searchText)"),
-                          systemImage: "magnifyingglass")
+                    Label(searchButtonTitle, systemImage: "magnifyingglass")
                 }
+                .accessibilityLabel(searchButtonTitle)
                 .accessibilityIdentifier("orderSearchButton")
-                Spacer()
+                if !isLarge {
+                    Spacer()
+                }
                 Button("Clear", action: viewModel.clearCriteria)
                     .disabled(!viewModel.hasActiveCriteria)
+                    .accessibilityLabel("Clear search and sort")
                     .accessibilityIdentifier("clearCriteriaButton")
             }
             .padding(.vertical, 4)
@@ -39,12 +58,16 @@ struct CustomerOrderList: View {
                     .textFieldStyle(.roundedBorder)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
+                    .accessibilityLabel("Search orders by customer or order number")
                     .accessibilityIdentifier("orderSearchField")
             }
-            HStack {
+            controlRowLayout {
                 Text("Sort by")
                     .font(.subheadline)
-                Spacer()
+                    .accessibilityHidden(true)
+                if !isLarge {
+                    Spacer()
+                }
                 // Each option's tag is the value the picker writes to sortOption.
                 Picker("Sort by", selection: $viewModel.sortOption) {
                     ForEach(SortOption.allCases) { option in
@@ -53,6 +76,8 @@ struct CustomerOrderList: View {
                 }
                 .pickerStyle(.menu)
                 .labelsHidden()
+                .accessibilityLabel("Sort by")
+                .accessibilityValue(viewModel.sortOption.rawValue)
                 .accessibilityIdentifier("orderSortPicker")
             }
         } content: {
@@ -67,24 +92,7 @@ struct CustomerOrderList: View {
                 NavigationLink {
                     CustomerOrderDetails(order: order)
                 } label: {
-                    VStack {
-                        HStack {
-                            // verbatim shows the text as-is, so the number has no comma.
-                            Text(verbatim: "Order #\(order.orderNumber)")
-                            Spacer()
-                            Text(order.total, format: .currency(code: "USD"))
-                                .foregroundStyle(.secondary)
-                        }
-                        Text(order.customerName)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .foregroundStyle(.secondary)
-                        HStack {
-                            Text("Ordered:")
-                            Spacer()
-                            DateText(date: order.orderDate)
-                        }
-                        .foregroundStyle(.secondary)
-                    }
+                    CustomerOrderRow(order: order)
                 }
             }
 
@@ -95,6 +103,43 @@ struct CustomerOrderList: View {
         }
         // Load the data when the screen appears.
         .task { await viewModel.loadData(repository: repository) }
+    }
+}
+
+private struct CustomerOrderRow: View {
+    let order: OrderGroup
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    var body: some View {
+        let isLarge = dynamicTypeSize.isAccessibilitySize
+        let rowLayout = isLarge
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 2))
+            : AnyLayout(HStackLayout(alignment: .firstTextBaseline))
+
+        VStack(alignment: .leading, spacing: 4) {
+            rowLayout {
+                // verbatim shows the text as-is, so the number has no comma.
+                Text(verbatim: "Order #\(order.orderNumber)")
+                if !isLarge {
+                    Spacer()
+                }
+                Text(order.total, format: .currency(code: "USD"))
+                    .foregroundStyle(.secondary)
+            }
+            Text(order.displayCustomerName)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .foregroundStyle(.secondary)
+            rowLayout {
+                Text("Ordered:")
+                if !isLarge {
+                    Spacer()
+                }
+                DateText(date: order.orderDate)
+            }
+            .foregroundStyle(.secondary)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(order.accessibilitySummary)
     }
 }
 
@@ -112,6 +157,15 @@ struct OrderLine: Identifiable, Hashable {
         orderQty = order.orderQty
         unitPrice = order.unitPrice
         lineTotal = order.lineTotal
+    }
+
+    var displayProductName: String {
+        let trimmed = productName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? "Unnamed product" : trimmed
+    }
+
+    var accessibilitySummary: String {
+        "\(displayProductName). \(orderQty) at \(unitPrice.formatted(.currency(code: "USD"))), total \(lineTotal.formatted(.currency(code: "USD")))."
     }
 }
 
@@ -149,6 +203,17 @@ struct OrderGroup: Identifiable, Hashable {
     var total: Double { lines.reduce(0) { $0 + $1.lineTotal } }
     var totalUnits: Int64 { lines.reduce(0) { $0 + $1.orderQty } }
     var productCount: Int { lines.count }
+
+    var displayCustomerName: String {
+        let trimmed = customerName.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? "Customer not listed" : trimmed
+    }
+
+    var accessibilitySummary: String {
+        let dateText = sortDate?.formatted(date: .long, time: .omitted) ?? DateText.displayDate(orderDate)
+        let datePhrase = dateText == "--" ? "Order date not listed" : "Ordered \(dateText)"
+        return "Order \(orderNumber). \(displayCustomerName). Total \(total.formatted(.currency(code: "USD"))). \(datePhrase)."
+    }
 }
 
 extension CustomerOrderList {

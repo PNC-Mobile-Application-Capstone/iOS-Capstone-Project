@@ -36,6 +36,7 @@ struct ListHeader<Controls: View>: View {
                     .listRowInsets(EdgeInsets())
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
+                    .accessibilityHidden(true)
             }
             .listSectionSpacing(0)
         } else {
@@ -44,6 +45,7 @@ struct ListHeader<Controls: View>: View {
                     Text(errorMessage)
                         .font(.subheadline)
                         .foregroundStyle(.red)
+                        .accessibilityLabel("Error: \(errorMessage)")
                 }
                 controls
             }
