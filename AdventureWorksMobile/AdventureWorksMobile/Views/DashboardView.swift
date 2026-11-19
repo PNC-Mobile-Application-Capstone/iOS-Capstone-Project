@@ -27,8 +27,10 @@ struct DashboardView: View {
     var body: some View {
         PageTemplate("Dashboard",
                      errorMessage: viewModel.errorMessage,
+                     isLoading: viewModel.isLoading,
+                     hasLoaded: viewModel.hasLoaded,
                      onRefresh: {
-            await viewModel.loadData()
+            await viewModel.loadData(forceRefresh: true)
             await loadLinks()
         }) {
             Section("Overview") {
@@ -38,39 +40,43 @@ struct DashboardView: View {
             }
             
             Section("Weekly Sales") {
-                // Tapping the chart shows or hides the daily list below it.
-                Button {
-                    withAnimation { showsDailySales = !showsDailySales }
-                } label: {
-                    VStack {
-                        BarChart(
-                            entries: viewModel.lastWeekSales.map { entry in
-                                    .init(
-                                        label: entry.salesDate.formatted(.dateTime.weekday(.abbreviated)),
-                                        value: entry.totalSales,
-                                        valueLabel: "$\(entry.totalSales.formatted(.number.notation(.compactName).precision(.fractionLength(1))))",
-                                        accessibilityText: "\(entry.salesDate.formatted(.dateTime.weekday(.wide))), \(entry.totalSales.formatted(.currency(code: "USD").precision(.fractionLength(0))))"
-                                    )
-                            })
-                        Label(showsDailySales ? "Hide List" : "Show List",
-                              systemImage: showsDailySales ? "chevron.up" : "chevron.down")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                sectionFeedback(.sales, isEmpty: viewModel.weeklySales.isEmpty)
+                if !viewModel.weeklySales.isEmpty {
+                    // Tapping the chart shows or hides the daily list below it.
+                    Button {
+                        withAnimation { showsDailySales = !showsDailySales }
+                    } label: {
+                        VStack {
+                            BarChart(
+                                entries: viewModel.lastWeekSales.map { entry in
+                                        .init(
+                                            label: entry.salesDate.formatted(.dateTime.weekday(.abbreviated)),
+                                            value: entry.totalSales,
+                                            valueLabel: "$\(entry.totalSales.formatted(.number.notation(.compactName).precision(.fractionLength(1))))",
+                                            accessibilityText: "\(entry.salesDate.formatted(.dateTime.weekday(.wide))), \(entry.totalSales.formatted(.currency(code: "USD").precision(.fractionLength(0))))"
+                                        )
+                                })
+                            Label(showsDailySales ? "Hide List" : "Show List",
+                                  systemImage: showsDailySales ? "chevron.up" : "chevron.down")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        }
                     }
-                }
-                .buttonStyle(.plain)
-                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                .accessibilityLabel(viewModel.weeklySalesSummary)
-                .accessibilityHint(showsDailySales ? "Hides the daily sales list" : "Shows the daily sales list")
-                
-                if showsDailySales {
-                    ForEach(viewModel.lastWeekSales) { entry in
-                        DailySalesRow(entry: entry)
+                    .buttonStyle(.plain)
+                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                    .accessibilityLabel(viewModel.weeklySalesSummary)
+                    .accessibilityHint(showsDailySales ? "Hides the daily sales list" : "Shows the daily sales list")
+
+                    if showsDailySales {
+                        ForEach(viewModel.lastWeekSales) { entry in
+                            DailySalesRow(entry: entry)
+                        }
                     }
                 }
             }
             
             Section("Product Performance") {
+                sectionFeedback(.performance, isEmpty: viewModel.productPerformance.isEmpty)
                 productTiles
                     .navigationDestination(item: $openedProduct) { product in
                         ProductDetails(product: product)
@@ -82,6 +88,7 @@ struct DashboardView: View {
             
             
             Section("Low Stock Alert") {
+                sectionFeedback(.stock, isEmpty: viewModel.lowStock.isEmpty)
                 ForEach(viewModel.lowStock) { item in
                     productLink(item.productId) {
                         LowStockRow(item: item)
@@ -90,6 +97,7 @@ struct DashboardView: View {
             }
             
             Section("Today's Shifts") {
+                sectionFeedback(.shifts, isEmpty: viewModel.shifts.isEmpty)
                 shiftTiles
                     .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                     .listRowBackground(Color.clear)
@@ -99,7 +107,7 @@ struct DashboardView: View {
                         Text("No one is on the \(group.name) shift today.")
                             .foregroundStyle(.secondary)
                     }
-                    
+
                     ForEach(group.people) { person in
                         let employee = viewModel.employee(for: person)
                         NavigationLink {
@@ -129,13 +137,44 @@ struct DashboardView: View {
         return Array(repeating: GridItem(.flexible(), spacing: 10), count: count)
     }
     
+    @ViewBuilder
+    private func sectionFeedback(_ area: Area, isEmpty: Bool) -> some View {
+        if viewModel.loadingSections.contains(area) {
+            ProgressView(viewModel.loadedSections.contains(area) ? "Refreshing…" : "Loading…")
+        }
+        if let message = viewModel.errors[area] {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(message)
+                    .foregroundStyle(.secondary)
+                if viewModel.loadedSections.contains(area) && !isEmpty {
+                    Text("Showing previously loaded information.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Button("Retry") {
+                    Task { await viewModel.retry(area) }
+                }
+                .disabled(viewModel.loadingSections.contains(area))
+                .accessibilityLabel("Retry \(area.rawValue)")
+                .accessibilityIdentifier("retry-\(area.rawValue)")
+            }
+        } else if viewModel.loadedSections.contains(area) && isEmpty {
+            Text("No \(area.rawValue) available.")
+                .foregroundStyle(.secondary)
+        }
+    }
+
     private var statGrid: some View {
         // Two equal columns of stat blocks, or one column at accessibility Dynamic Type sizes.
         LazyVGrid(columns: twoColumnOrStacked, spacing: 12) {
-            StatBlock(label: "Weekly Sales", value: viewModel.totalSales.formatted(.currency(code: "USD")))
-            StatBlock(label: "Weekly Profit", value: viewModel.totalProfit.formatted(.currency(code: "USD")))
-            StatBlock(label: "Low Stock Items", value: "\(viewModel.lowStock.count)")
-            StatBlock(label: "Staff On Shift", value: "\(viewModel.shifts.count)")
+            StatBlock(label: "Weekly Sales", value: viewModel.loadedSections.contains(.sales)
+                      ? viewModel.totalSales.formatted(.currency(code: "USD")) : "—")
+            StatBlock(label: "Weekly Profit", value: viewModel.loadedSections.contains(.sales)
+                      ? viewModel.totalProfit.formatted(.currency(code: "USD")) : "—")
+            StatBlock(label: "Low Stock Items", value: viewModel.loadedSections.contains(.stock)
+                      ? "\(viewModel.lowStock.count)" : "—")
+            StatBlock(label: "Staff On Shift", value: viewModel.loadedSections.contains(.shifts)
+                      ? "\(viewModel.shifts.count)" : "—")
         }
     }
     
@@ -180,7 +219,7 @@ struct DashboardView: View {
                 ForEach(viewModel.shiftGroups) { group in
                     let isSelected = group.id == selectedShift
                     let isOnNow = group.kind == currentShift
-                    
+
                     Button {
                         withAnimation { selectedShift = isSelected ? nil : group.id }
                     } label: {
@@ -223,20 +262,41 @@ struct DashboardView: View {
 }
 
 extension DashboardView {
+
+    enum Area: String, CaseIterable {
+        case sales = "weekly sales"
+        case performance = "product performance"
+        case stock = "low-stock products"
+        case shifts = "employee shifts"
+    }
+
     
     // @Observable redraws a view only when a property it reads changes.
+    @MainActor
     @Observable
     
     // MARK: - ViewModel
     class ViewModel {
         
-        private var repository: any DashboardRepository
+        private let repository: any DashboardRepository
+        private var isLoadingAll = false
+        private var loadWaiters: [CheckedContinuation<Void, Never>] = []
+        private(set) var loadingSections: Set<Area> = []
+        private(set) var loadedSections: Set<Area> = []
+        private(set) var errors: [Area: String] = [:]
+
+        var isLoading: Bool { isLoadingAll || !loadingSections.isEmpty }
+        var hasLoaded: Bool { !loadedSections.isEmpty }
+
         
         var weeklySales: [WeeklySalesEntry] = []
         var productPerformance: [ProductPerformanceEntry] = []
         var lowStock: [LowStockEntry] = []
         var shifts: [ShiftEntry] = []
-        var errorMessage = ""
+        private var completedSections: Set<Area> = []
+        var errorMessage: String {
+            errors.isEmpty ? "" : "Some dashboard data couldn't be updated. Use Retry in the affected section."
+        }
         private var hasShownSaved = false
         
         // products and enployees by id so dashboard rows can open their details
@@ -308,12 +368,17 @@ extension DashboardView {
             employeesById[Int64(person.employeeId)] ?? EmployeeRow(shift: person)
         }
         
-        private func isCancelled(_ error: Error) -> Bool {
-            error is CancellationError || (error as? URLError)?.code == .cancelled
-        }
-        
-        func loadData() async {
-            // 1. Show the last saved dashboard right away, so the screen isn't empty.
+        func loadData(forceRefresh: Bool = false) async {
+            if isLoading {
+                guard !forceRefresh else { return }
+                await withCheckedContinuation { loadWaiters.append($0) }
+                if !Task.isCancelled { await loadData() }
+                return
+            }
+            let hasPendingSections = Area.allCases.contains {
+                !completedSections.contains($0) && errors[$0] == nil
+            }
+            guard forceRefresh || hasPendingSections else { return }
             if !hasShownSaved {
                 hasShownSaved = true
                 if let saved = repository.loadSaved() {
@@ -321,24 +386,74 @@ extension DashboardView {
                     productPerformance = saved.productPerformance
                     lowStock = saved.lowStock
                     shifts = saved.shifts
+                    if !weeklySales.isEmpty { loadedSections.insert(.sales) }
+                    if !productPerformance.isEmpty { loadedSections.insert(.performance) }
+                    if !lowStock.isEmpty { loadedSections.insert(.stock) }
+                    if !shifts.isEmpty { loadedSections.insert(.shifts) }
                 }
             }
-            
-            // 2. Ask the API for all four at once. Each section updates as soon as its own answer arrives.
-            let allUpdated = await withTaskGroup(of: Bool.self) { group -> Bool in
-                group.addTask { await self.refreshWeeklySales() }
-                group.addTask { await self.refreshProductPerformance() }
-                group.addTask { await self.refreshLowStock() }
-                group.addTask { await self.refreshShifts() }
-                
-                var all = true
-                for await updated in group where !updated { all = false }
-                return all
+            isLoadingAll = true
+            defer {
+                isLoadingAll = false
+                resumeWaitingLoads()
             }
-            
-            errorMessage = allUpdated ? "" : "Some dashboard data couldn't be updated. Pull down to try again."
+
+            async let sales: Void = loadSection(.sales, forceRefresh: forceRefresh)
+            async let performance: Void = loadSection(.performance, forceRefresh: forceRefresh)
+            async let stock: Void = loadSection(.stock, forceRefresh: forceRefresh)
+            async let shifts: Void = loadSection(.shifts, forceRefresh: forceRefresh)
+            _ = await (sales, performance, stock, shifts)
         }
-        
+
+        func retry(_ area: Area) async {
+            await loadSection(area, forceRefresh: true)
+        }
+
+        private func resumeWaitingLoads() {
+            guard !isLoading else { return }
+            let waiters = loadWaiters
+            loadWaiters.removeAll()
+            waiters.forEach { $0.resume() }
+        }
+
+        private func loadSection(_ area: Area, forceRefresh: Bool) async {
+            guard !loadingSections.contains(area),
+                  forceRefresh || (!completedSections.contains(area) && errors[area] == nil) else { return }
+            loadingSections.insert(area)
+            errors[area] = nil
+            defer {
+                loadingSections.remove(area)
+                resumeWaitingLoads()
+            }
+
+            do {
+                switch area {
+                case .sales:
+                    let values = try await repository.getWeeklySales()
+                    try Task.checkCancellation()
+                    weeklySales = values
+                case .performance:
+                    let values = try await repository.getProductPerformance()
+                    try Task.checkCancellation()
+                    productPerformance = values
+                case .stock:
+                    let values = try await repository.getLowStock()
+                    try Task.checkCancellation()
+                    lowStock = values
+                case .shifts:
+                    let values = try await repository.getShifts()
+                    try Task.checkCancellation()
+                    shifts = values
+                }
+                loadedSections.insert(area)
+                completedSections.insert(area)
+            } catch {
+                if !NetworkError.isCancellation(error) {
+                    errors[area] = NetworkError.userMessage(for: error)
+                }
+            }
+        }
+
         func loadLinks(productRepository: (any TieredCacheRepositoryProtocol<Product>)?,
                        employeeRepository: (any TieredCacheRepositoryProtocol<Employee>)?) async {
             if let productRepository {
@@ -362,26 +477,7 @@ extension DashboardView {
             }
         }
         
-        // Each one replaces its section only when the API answers. On failure the saved data stays.
-        private func refreshWeeklySales() async -> Bool {
-            do { weeklySales = try await repository.getWeeklySales(); return true }
-            catch { print("weekly-sales failed: \(error)"); return isCancelled(error) }
-        }
-        
-        private func refreshProductPerformance() async -> Bool {
-            do { productPerformance = try await repository.getProductPerformance(); return true }
-            catch { print("best-worst failed: \(error)"); return isCancelled(error) }
-        }
-        
-        private func refreshLowStock() async -> Bool {
-            do { lowStock = try await repository.getLowStock(); return true }
-            catch { print("low-stock failed: \(error)"); return isCancelled(error) }
-        }
-        
-        private func refreshShifts() async -> Bool {
-            do { shifts = try await repository.getShifts(); return true }
-            catch { print("shifts failed: \(error)"); return isCancelled(error) }
-        }
+
     }
 }
 

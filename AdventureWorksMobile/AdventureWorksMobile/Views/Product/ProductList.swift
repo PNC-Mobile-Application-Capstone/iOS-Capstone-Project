@@ -32,6 +32,10 @@ struct ProductList: View {
 
         PageTemplate("Products",
                      errorMessage: viewModel.errorMessage,
+                     isLoading: viewModel.isLoading,
+                     hasLoaded: viewModel.hasLoaded,
+                     isEmpty: viewModel.isEmpty,
+                     onRetry: { await viewModel.loadData(repository: repository, forceRefresh: true) },
                      onRefresh: { await viewModel.loadData(repository: repository, forceRefresh: true) }) {
             controlRowLayout {
                 Button {
@@ -157,6 +161,10 @@ extension ProductList {
         var items = PagedItems<Product>(pageSize: 25)
         var source: CachedDataSource = .notcached
         var errorMessage: String = ""
+        private(set) var isLoading = false
+        private var loadWaiters: [CheckedContinuation<Void, Never>] = []
+        private(set) var hasLoaded = false
+        var isEmpty: Bool { allProducts.isEmpty }
 
         private var allProducts: [Product] = []
         // didSet reruns the search and sort whenever these change.
@@ -194,15 +202,38 @@ extension ProductList {
         }
 
         func loadData(repository: (any TieredCacheRepositoryProtocol<Product>)?, forceRefresh: Bool = false) async {
-            guard let repository = repository else { return }
+            if isLoading {
+                guard !forceRefresh && !hasLoaded else { return }
+                await withCheckedContinuation { loadWaiters.append($0) }
+                if !Task.isCancelled && !hasLoaded && errorMessage.isEmpty {
+                    await loadData(repository: repository)
+                }
+                return
+            }
+            guard forceRefresh || !hasLoaded, let repository else { return }
+            isLoading = true
+            errorMessage = ""
+            defer {
+                isLoading = false
+                let waiters = loadWaiters
+                loadWaiters.removeAll()
+                waiters.forEach { $0.resume() }
+            }
 
             do {
                 let (products, source) = try await repository.getAll(forceRefresh: forceRefresh)
+                try Task.checkCancellation()
                 self.source = source
+                hasLoaded = true
+                if source == .staleDisk {
+                    errorMessage = "Couldn't refresh. Showing saved information."
+                }
                 setProducts(products)
                 print("Loaded \(products.count) items from \(source)")
             } catch {
-                errorMessage = error.localizedDescription
+                if !NetworkError.isCancellation(error) {
+                    errorMessage = NetworkError.userMessage(for: error)
+                }
             }
         }
 
