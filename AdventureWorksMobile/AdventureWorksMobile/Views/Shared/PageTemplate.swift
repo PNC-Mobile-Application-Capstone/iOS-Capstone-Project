@@ -18,6 +18,10 @@ enum PageListStyle {
 struct PageTemplate<Controls: View, Content: View>: View {
     let title: String
     let errorMessage: String
+    let isLoading: Bool
+    let hasLoaded: Bool
+    let isEmpty: Bool
+    let onRetry: (() async -> Void)?
     let listStyle: PageListStyle
     let showsScrollToTop: Bool
     let showsAccountButton: Bool
@@ -33,6 +37,10 @@ struct PageTemplate<Controls: View, Content: View>: View {
     ///   - content: The page's rows and sections.
     init(_ title: String,
          errorMessage: String = "",
+         isLoading: Bool = false,
+         hasLoaded: Bool = false,
+         isEmpty: Bool = false,
+         onRetry: (() async -> Void)? = nil,
          listStyle: PageListStyle = .standard,
          showsScrollToTop: Bool = true,
          showsAccountButton: Bool = true,
@@ -41,6 +49,10 @@ struct PageTemplate<Controls: View, Content: View>: View {
          @ViewBuilder content: () -> Content) {
         self.title = title
         self.errorMessage = errorMessage
+        self.isLoading = isLoading
+        self.hasLoaded = hasLoaded
+        self.isEmpty = isEmpty
+        self.onRetry = onRetry
         self.listStyle = listStyle
         self.showsScrollToTop = showsScrollToTop
         self.showsAccountButton = showsAccountButton
@@ -50,7 +62,7 @@ struct PageTemplate<Controls: View, Content: View>: View {
     }
 
     private var hasHeader: Bool {
-        !errorMessage.isEmpty || Controls.self != EmptyView.self
+        isLoading || !errorMessage.isEmpty || Controls.self != EmptyView.self
     }
 
     var body: some View {
@@ -83,8 +95,28 @@ struct PageTemplate<Controls: View, Content: View>: View {
 
     private var list: some View {
         List {
-            ListHeader(errorMessage: errorMessage) { controls }
-            content
+            ListHeader(errorMessage: errorMessage,
+                       isRefreshing: isLoading && hasLoaded,
+                       onRetry: onRetry) { controls }
+            if isLoading && !hasLoaded {
+                ProgressView("Loading \(title.lowercased())…")
+                    .frame(maxWidth: .infinity)
+                    .listRowBackground(Color.clear)
+                    .accessibilityIdentifier("initialLoadingProgress")
+            } else if !hasLoaded && !errorMessage.isEmpty {
+                ContentUnavailableView("Unable to load \(title.lowercased())",
+                                       systemImage: "exclamationmark.triangle",
+                                       description: Text("Use Retry above to try again."))
+                    .listRowBackground(Color.clear)
+            } else if hasLoaded && isEmpty && errorMessage.isEmpty {
+                ContentUnavailableView("No \(title.lowercased()) available",
+                                       systemImage: "tray",
+                                       description: Text("Pull down to refresh."))
+                    .listRowBackground(Color.clear)
+                    .accessibilityIdentifier("emptyDataMessage")
+            } else {
+                content
+            }
         }
         // With no header, ListHeader is a 0 point marker row. This lets it be that small.
         .environment(\.defaultMinListRowHeight, hasHeader ? defaultMinRowHeight : 0)
@@ -113,6 +145,10 @@ extension PageTemplate where Controls == EmptyView {
     /// For pages with no search or sort.
     init(_ title: String,
          errorMessage: String = "",
+         isLoading: Bool = false,
+         hasLoaded: Bool = false,
+         isEmpty: Bool = false,
+         onRetry: (() async -> Void)? = nil,
          listStyle: PageListStyle = .standard,
          showsScrollToTop: Bool = true,
          showsAccountButton: Bool = true,
@@ -120,6 +156,10 @@ extension PageTemplate where Controls == EmptyView {
          @ViewBuilder content: () -> Content) {
         self.init(title,
                   errorMessage: errorMessage,
+                  isLoading: isLoading,
+                  hasLoaded: hasLoaded,
+                  isEmpty: isEmpty,
+                  onRetry: onRetry,
                   listStyle: listStyle,
                   showsScrollToTop: showsScrollToTop,
                   showsAccountButton: showsAccountButton,

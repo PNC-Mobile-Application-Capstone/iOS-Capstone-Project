@@ -583,7 +583,7 @@ struct AdventureWorksMobileTests {
         
         // network works now, error should clear on refresh
         repository.failing = []
-        await model.loadData()
+        await model.loadData(forceRefresh: true)
         
         #expect(model.errorMessage.isEmpty)
         #expect(model.shifts.count == 5)
@@ -597,7 +597,7 @@ struct AdventureWorksMobileTests {
         
         // fail everything
         repository.failing = [.weeklySales, .productPerformance, .lowStock, .shifts]
-        await model.loadData()
+        await model.loadData(forceRefresh: true)
         
         // data from first load shold still show
         #expect(model.weeklySales.count == 7)
@@ -606,6 +606,58 @@ struct AdventureWorksMobileTests {
     }
 
     // A URLSession that sends every request to URLProtocolStub instead of the network.
+    @Test
+    func productDetailFailureCanRetryWithoutTechnicalErrors() async throws {
+        let persistence = PersistenceController(inMemory: true)
+        let product = Product(context: persistence.container.viewContext)
+        product.id = 42
+        product.name = "Saved Bike"
+        let status = AuthStatus(tokenStore: InMemoryTokenStore())
+        #expect(status.logIn(accessToken: "access", refreshToken: "refresh"))
+        let repository = TieredCacheRepositoryBase<Product>(
+            authStatus: status, urlBase: "https://example.test/products",
+            context: persistence.container.viewContext, session: Self.stubbedSession())
+        URLProtocolStub.handler = { Self.response(for: $0, statusCode: 503, body: Data()) }
+        let model = ProductDetails.ViewModel()
+        await model.loadDetail(for: product, repository: repository, forceRefresh: true)
+        #expect(!model.errorMessage.isEmpty)
+        #expect(!model.errorMessage.contains("503"))
+        #expect(!model.isLoading)
+        #expect(product.name == "Saved Bike")
+        URLProtocolStub.handler = {
+            Self.response(for: $0, statusCode: 200, body: Data(#"{"productName":"Updated Bike","listPrice":150}"#.utf8))
+        }
+        await model.loadDetail(for: product, repository: repository, forceRefresh: true)
+        #expect(product.name == "Updated Bike")
+        #expect(model.errorMessage.isEmpty)
+        #expect(!model.isLoading)
+    }
+
+    @Test
+    func cancelledForcedRefreshDoesNotReportStaleSuccess() async throws {
+        let persistence = PersistenceController(inMemory: true)
+        let status = AuthStatus(tokenStore: InMemoryTokenStore())
+        #expect(status.logIn(accessToken: "access", refreshToken: "refresh"))
+        let suite = "RecoveryCancellation.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let repository = TieredCacheRepositoryBase<Product>(
+            authStatus: status, urlBase: "https://example.test/products",
+            context: persistence.container.viewContext, session: Self.stubbedSession(), defaults: defaults)
+        URLProtocolStub.handler = {
+            Self.response(for: $0, statusCode: 200,
+                          body: Data(#"[{"productId":1,"name":"Bike","color":null,"listPrice":99,"productNumber":"B-1"}]"#.utf8))
+        }
+        _ = try await repository.getAll()
+        URLProtocolStub.handler = { _ in throw URLError(.cancelled) }
+        do {
+            _ = try await repository.getAll(forceRefresh: true)
+            Issue.record("Cancellation must not be reported as a successful cached refresh")
+        } catch {
+            #expect(NetworkError.isCancellation(error))
+        }
+    }
+
     private static func stubbedSession() -> URLSession {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [URLProtocolStub.self]

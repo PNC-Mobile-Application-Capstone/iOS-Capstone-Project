@@ -35,3 +35,31 @@ extension NetworkError: LocalizedError {
         }
     }
 }
+
+extension NetworkError {
+    static func isCancellation(_ error: Error) -> Bool {
+        error is CancellationError || (error as? URLError)?.code == .cancelled
+    }
+
+    static func userMessage(for error: Error) -> String {
+        if let urlError = error as? URLError {
+            switch urlError.code {
+            case .notConnectedToInternet, .networkConnectionLost, .cannotFindHost, .cannotConnectToHost:
+                return "Couldn't connect. Check your connection and try again."
+            case .timedOut:
+                return "The request took too long. Please try again."
+            default: break
+            }
+        }
+        if let networkError = error as? NetworkError {
+            switch networkError {
+            case .unauthorized, .missingAuthToken:
+                return "Your session expired. Please sign in again."
+            case .noConnection:
+                return "Couldn't connect. Check your connection and try again."
+            default: break
+            }
+        }
+        return "Couldn't load the information. Please try again."
+    }
+}
