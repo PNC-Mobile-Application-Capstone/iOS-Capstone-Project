@@ -233,32 +233,6 @@ struct AdventureWorksMobileTests {
         let (offlineItems, offlineSource) = try await offlineRepository.getAll()
         #expect(offlineItems.count == 1)
         #expect(offlineSource == .staleDisk)
-        // The saved copy reports when it was originally fetched, not the time of the failed refresh.
-        #expect(offlineRepository.lastUpdated == currentDate.addingTimeInterval(-16 * 60))
-    }
-
-    @Test
-    func dataStatusSaysWhenListWasUpdatedOrThatItIsOffline() {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
-        let now = Date(timeIntervalSince1970: 1_700_000_000)
-        let earlierToday = now.addingTimeInterval(-60 * 60)
-        let today = earlierToday.formatted(date: .omitted, time: .shortened)
-
-        #expect(DataStatus(source: .notcached, lastUpdated: earlierToday).message(now: now, calendar: calendar)
-                == "Last updated \(today)")
-        #expect(DataStatus(source: .memory, lastUpdated: earlierToday).message(now: now, calendar: calendar)
-                == "Last updated \(today)")
-        #expect(DataStatus(source: .staleDisk, lastUpdated: earlierToday).message(now: now, calendar: calendar)
-                == "Offline, showing saved data from \(today)")
-        #expect(DataStatus(source: .staleDisk, lastUpdated: nil).message(now: now, calendar: calendar)
-                == "Offline, showing saved data")
-        #expect(DataStatus(source: .disk, lastUpdated: nil).message(now: now, calendar: calendar) == nil)
-
-        // Older than today includes the date.
-        let lastWeek = now.addingTimeInterval(-7 * 86_400)
-        let message = DataStatus(source: .disk, lastUpdated: lastWeek).message(now: now, calendar: calendar)
-        #expect(message == "Last updated \(lastWeek.formatted(date: .abbreviated, time: .shortened))")
     }
 
     @Test

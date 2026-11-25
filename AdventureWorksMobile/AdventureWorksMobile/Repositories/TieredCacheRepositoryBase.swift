@@ -27,9 +27,6 @@ class TieredCacheRepositoryBase<Item: NSManagedObject & Codable & Identifiable>:
     // UserDefaults key for when the disk cache was last filled.
     private var timestampKey: String { "cache.timestamp.\(cacheKeyPrefix).\(urlBase)" }
 
-    // The disk timestamp is set on every successful API fetch, so it is also the "last updated" time.
-    var lastUpdated: Date? { defaults.object(forKey: timestampKey) as? Date }
-
     // Init with no cache. Needed because this class overrides the base init.
     override init(authStatus: AuthStatus,
                   session: URLSession = .shared,

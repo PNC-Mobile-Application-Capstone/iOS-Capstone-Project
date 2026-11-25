@@ -31,7 +31,6 @@ struct EmployeeList: View {
                      hasLoaded: viewModel.hasLoaded,
                      isEmpty: viewModel.isEmpty,
                      onRetry: { await viewModel.loadData(repository: repository, forceRefresh: true) },
-                     dataStatus: viewModel.dataStatus,
                      onRefresh: { await viewModel.loadData(repository: repository, forceRefresh: true) }) {
             
             controlRowLayout {
@@ -203,7 +202,7 @@ extension EmployeeList {
         /// Every employee, revealed a page at a time as the user scrolls.
         var items = PagedItems<EmployeeRow>(pageSize: 25)
         private var allEmployees: [EmployeeRow] = []
-        var dataStatus: DataStatus?
+        var source: CachedDataSource = .notcached
         var errorMessage: String = ""
         private(set) var isLoading = false
         private var loadWaiters: [CheckedContinuation<Void, Never>] = []
@@ -277,7 +276,7 @@ extension EmployeeList {
             do {
                 let (employees, source) = try await repository.getAll(forceRefresh: forceRefresh)
                 try Task.checkCancellation()
-                dataStatus = DataStatus(source: source, lastUpdated: repository.lastUpdated)
+                self.source = source
                 hasLoaded = true
                 if source == .staleDisk {
                     errorMessage = "Couldn't refresh. Showing saved information."

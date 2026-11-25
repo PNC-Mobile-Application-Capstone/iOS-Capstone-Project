@@ -164,7 +164,6 @@ private final class RecoveryRepository<Item: Codable & Identifiable>: TieredCach
     var result: Result<([Item], CachedDataSource), Error>
     var gate: RecoveryGate?
     private(set) var requests: [Bool] = []
-    var lastUpdated: Date?
 
     init(result: Result<([Item], CachedDataSource), Error>) {
         self.result = result

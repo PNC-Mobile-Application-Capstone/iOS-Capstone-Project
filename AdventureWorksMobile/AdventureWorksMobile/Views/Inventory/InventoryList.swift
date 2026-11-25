@@ -38,7 +38,6 @@ struct InventoryList: View {
                      hasLoaded: viewModel.hasLoaded,
                      isEmpty: viewModel.isEmpty,
                      onRetry: { await viewModel.loadData(repository: repository, forceRefresh: true) },
-                     dataStatus: viewModel.dataStatus,
                      listStyle: .sidebar,
                      onRefresh: { await viewModel.loadData(repository: repository, forceRefresh: true) }) {
             controlRowLayout {
@@ -216,7 +215,7 @@ extension InventoryList {
     class ViewModel {
         /// Every location, revealed a page at a time as the user scrolls.
         var locations = PagedItems<LocationGroup>(pageSize: 25)
-        var dataStatus: DataStatus?
+        var source: CachedDataSource = .notcached
         var errorMessage: String = ""
         private(set) var isLoading = false
         private var loadWaiters: [CheckedContinuation<Void, Never>] = []
@@ -281,7 +280,7 @@ extension InventoryList {
             do {
                 let (rows, source) = try await repository.getAll(forceRefresh: forceRefresh)
                 try Task.checkCancellation()
-                dataStatus = DataStatus(source: source, lastUpdated: repository.lastUpdated)
+                self.source = source
                 hasLoaded = true
                 if source == .staleDisk {
                     errorMessage = "Couldn't refresh. Showing saved information."
