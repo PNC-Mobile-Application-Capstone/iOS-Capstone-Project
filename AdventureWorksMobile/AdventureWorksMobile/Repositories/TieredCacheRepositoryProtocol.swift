@@ -3,6 +3,8 @@
 //  AdventureWorksMobile
 //
 
+import Foundation
+
 // Where getAll found its data.
 enum CachedDataSource: Equatable {
     case memory
@@ -18,6 +20,9 @@ protocol TieredCacheRepositoryProtocol<Item> {
     associatedtype Item: Identifiable, Codable
 
     func getAll(forceRefresh: Bool) async throws -> ([Item], CachedDataSource)
+
+    /// When the data was last fetched from the API, or nil if it never has been.
+    var lastUpdated: Date? { get }
 }
 
 // getAll() with no argument uses the cache.

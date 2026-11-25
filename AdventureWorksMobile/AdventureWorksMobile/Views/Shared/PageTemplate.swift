@@ -22,6 +22,7 @@ struct PageTemplate<Controls: View, Content: View>: View {
     let hasLoaded: Bool
     let isEmpty: Bool
     let onRetry: (() async -> Void)?
+    let dataStatus: DataStatus?
     let listStyle: PageListStyle
     let showsScrollToTop: Bool
     let showsAccountButton: Bool
@@ -33,6 +34,7 @@ struct PageTemplate<Controls: View, Content: View>: View {
     @State private var showsAccount = false
 
     /// - Parameters:
+    ///   - dataStatus: Where the data came from. Shows "Last updated" or "Offline" under the title.
     ///   - controls: Search, sort, or other rows that sit under the title and scroll away.
     ///   - content: The page's rows and sections.
     init(_ title: String,
@@ -41,6 +43,7 @@ struct PageTemplate<Controls: View, Content: View>: View {
          hasLoaded: Bool = false,
          isEmpty: Bool = false,
          onRetry: (() async -> Void)? = nil,
+         dataStatus: DataStatus? = nil,
          listStyle: PageListStyle = .standard,
          showsScrollToTop: Bool = true,
          showsAccountButton: Bool = true,
@@ -53,6 +56,7 @@ struct PageTemplate<Controls: View, Content: View>: View {
         self.hasLoaded = hasLoaded
         self.isEmpty = isEmpty
         self.onRetry = onRetry
+        self.dataStatus = dataStatus
         self.listStyle = listStyle
         self.showsScrollToTop = showsScrollToTop
         self.showsAccountButton = showsAccountButton
@@ -62,7 +66,7 @@ struct PageTemplate<Controls: View, Content: View>: View {
     }
 
     private var hasHeader: Bool {
-        isLoading || !errorMessage.isEmpty || Controls.self != EmptyView.self
+        isLoading || !errorMessage.isEmpty || dataStatus?.message() != nil || Controls.self != EmptyView.self
     }
 
     var body: some View {
@@ -97,7 +101,8 @@ struct PageTemplate<Controls: View, Content: View>: View {
         List {
             ListHeader(errorMessage: errorMessage,
                        isRefreshing: isLoading && hasLoaded,
-                       onRetry: onRetry) { controls }
+                       onRetry: onRetry,
+                       dataStatus: dataStatus) { controls }
             if isLoading && !hasLoaded {
                 ProgressView("Loading \(title.lowercased())…")
                     .frame(maxWidth: .infinity)
@@ -149,6 +154,7 @@ extension PageTemplate where Controls == EmptyView {
          hasLoaded: Bool = false,
          isEmpty: Bool = false,
          onRetry: (() async -> Void)? = nil,
+         dataStatus: DataStatus? = nil,
          listStyle: PageListStyle = .standard,
          showsScrollToTop: Bool = true,
          showsAccountButton: Bool = true,
@@ -160,6 +166,7 @@ extension PageTemplate where Controls == EmptyView {
                   hasLoaded: hasLoaded,
                   isEmpty: isEmpty,
                   onRetry: onRetry,
+                  dataStatus: dataStatus,
                   listStyle: listStyle,
                   showsScrollToTop: showsScrollToTop,
                   showsAccountButton: showsAccountButton,

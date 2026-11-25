@@ -37,6 +37,7 @@ struct CustomerOrderList: View {
                      hasLoaded: viewModel.hasLoaded,
                      isEmpty: viewModel.isEmpty,
                      onRetry: { await viewModel.loadData(repository: repository, forceRefresh: true) },
+                     dataStatus: viewModel.dataStatus,
                      onRefresh: { await viewModel.loadData(repository: repository, forceRefresh: true) }) {
             controlRowLayout {
                 Button {
@@ -236,7 +237,7 @@ extension CustomerOrderList {
     class ViewModel {
         /// Every order, revealed a page at a time as the user scrolls.
         var orders = PagedItems<OrderGroup>(pageSize: 25)
-        var source: CachedDataSource = .notcached
+        var dataStatus: DataStatus?
         var errorMessage: String = ""
         private(set) var isLoading = false
         private var loadWaiters: [CheckedContinuation<Void, Never>] = []
@@ -305,7 +306,7 @@ extension CustomerOrderList {
             do {
                 let (rows, source) = try await repository.getAll(forceRefresh: forceRefresh)
                 try Task.checkCancellation()
-                self.source = source
+                dataStatus = DataStatus(source: source, lastUpdated: repository.lastUpdated)
                 hasLoaded = true
                 if source == .staleDisk {
                     errorMessage = "Couldn't refresh. Showing saved information."
